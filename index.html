@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Hearing &amp; Tinnitus Panel</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%230d9488'/%3E%3Cstop offset='1' stop-color='%230369a1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='11' fill='url(%23g)'/%3E%3Cg fill='%23fff'%3E%3Crect x='7' y='15' width='3' height='10' rx='1.5'/%3E%3Crect x='13' y='11' width='3' height='18' rx='1.5'/%3E%3Crect x='19' y='7' width='3' height='26' rx='1.5'/%3E%3Crect x='25' y='11' width='3' height='18' rx='1.5'/%3E%3Crect x='31' y='15' width='3' height='10' rx='1.5'/%3E%3C/g%3E%3C/svg%3E" />
-<meta name="description" content="A browser hearing suite: a quick sweep test, plus a full audiometry panel with per-ear thresholds, an audiogram, and an advanced tinnitus characterisation battery." />
+<meta name="description" content="A browser hearing suite with quick screening, Bayesian per-ear audiometry, speech-in-noise, tinnitus psychoacoustics, and exploratory auditory-processing tests." />
 <style>
   :root{
     --bg:#f4f7fa; --panel:#ffffff; --panel-2:#eef2f7; --line:#dce3ec;
@@ -32,9 +32,10 @@
   h1{font-size:1.3rem; margin:.2rem 0 .1rem; letter-spacing:-.01em; font-weight:700}
   .sub{color:var(--muted); font-size:.9rem; margin:0 0 16px; line-height:1.5}
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; margin-bottom:14px}
-  .tabs{display:flex; gap:6px; margin-bottom:14px}
+  .tabs{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin-bottom:14px}
   .tab{flex:1; text-align:center; padding:12px 8px; border-radius:12px; font-weight:700; font-size:.9rem; background:var(--panel-2); border:1px solid var(--line); color:var(--muted); cursor:pointer}
   .tab.active{background:var(--panel); color:var(--accent); border-color:var(--accent)}
+  @media(max-width:560px){.tabs{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .small{color:var(--muted); font-size:.82rem; line-height:1.55}
   .divider{height:1px; background:var(--line); margin:18px 0}
   label{font-size:.82rem; color:var(--muted); display:block; margin-bottom:6px}
@@ -322,12 +323,13 @@
   <!-- ============================ THE APP ============================ -->
   <div id="app" class="hidden">
   <h1>Hearing &amp; Tinnitus Panel</h1>
-  <p class="sub">A quick sweep screen, plus a full per-ear audiometry panel with an audiogram and tinnitus characterisation. <strong>Not a diagnostic audiogram</strong> — relative, self-referenced measures.</p>
+  <p class="sub">Quick screening, per-ear audiometry, speech-in-noise, tinnitus characterisation and exploratory auditory-processing tests. <strong>Not a diagnostic audiogram</strong> — relative, self-referenced measures.</p>
 
   <div class="tabs">
     <div class="tab active" id="tabBtnQuick" role="button" tabindex="0">Quick</div>
     <div class="tab" id="tabBtnAudio" role="button" tabindex="0">Audiology</div>
     <div class="tab" id="tabBtnDin" role="button" tabindex="0">Speech-in-noise</div>
+    <div class="tab" id="tabBtnResearch" role="button" tabindex="0">Research tests</div>
   </div>
 
   <!-- ============================ QUICK TEST TAB ============================ -->
@@ -513,6 +515,23 @@
     </section>
   </div>
 
+  <!-- ============================ RESEARCH TESTS TAB ============================ -->
+  <div id="tabResearch" class="hidden">
+    <section class="card screen" id="r_setup">
+      <p class="title-sm">Research auditory-processing tests</p>
+      <p class="small" style="margin-top:0">This makes the exploratory tests visible without requiring you to complete the full audiology panel first. It includes spectral, temporal, binaural/spatial and tinnitus-specific measures. Results are <strong>relative and exploratory</strong>, not clinical scores.</p>
+      <div class="flag" style="border-color:var(--line); background:var(--panel-2); color:var(--muted)"><strong>Headphones required.</strong> Work in a quiet room. Keep the level clearly audible but comfortable. If ordinary sounds cause ear pain, use the provocation-free sound-sensitivity log and do not run sound-provoking tests.</div>
+      <div class="divider"></div>
+      <p class="title-sm">Set a research-test level</p>
+      <p class="small" style="margin-top:0">Set the 1&nbsp;kHz reference to a comfortable, clearly audible level. The tests stay below this ceiling.</p>
+      <button class="btn-ghost" id="r_calBtn" style="width:100%; margin-top:10px">▶︎ Play reference tone (1 kHz)</button>
+      <input type="range" id="r_vol" min="5" max="100" value="45" aria-label="Research test level" />
+      <div class="small" style="text-align:center">Level: <strong id="r_volReadout">45%</strong></div>
+      <button class="btn-primary" id="r_launch" style="margin-top:14px">Open research test suite</button>
+      <div id="r_summary" class="small" style="margin-top:12px"></div>
+    </section>
+  </div>
+
   </div><!-- /#app -->
 
   <!-- Shared octave-confirmation & sound-therapy screens (used by both tabs) -->
@@ -522,6 +541,16 @@
   <section class="card screen hidden" id="freqmap"></section>
   <section class="card screen hidden" id="probe"></section>
   <section class="card screen hidden" id="react"></section>
+  <section class="card screen hidden" id="rtmenu"></section>
+  <section class="card screen hidden" id="rt_spectrum"></section>
+  <section class="card screen hidden" id="rt_rifunc"></section>
+  <section class="card screen hidden" id="rt_ttc"></section>
+  <section class="card screen hidden" id="rt_gap"></section>
+  <section class="card screen hidden" id="rt_freq"></section>
+  <section class="card screen hidden" id="rt_mod"></section>
+  <section class="card screen hidden" id="rt_space"></section>
+  <section class="card screen hidden" id="rt_dichotic"></section>
+  <section class="card screen hidden" id="rt_sensitivity"></section>
 
   <!-- ============================ METHODS / SCIENCE PANEL ============================ -->
   <section id="methods" class="hidden" aria-label="Scientific methods reference">
@@ -803,6 +832,60 @@
       </dl>
     </div>
 
+    <div class="test">
+      <h3>Sound-sensitivity &amp; recovery log <span class="chip meas">provocation-free</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>Self-reported sound pain/discomfort, tinnitus reactivity, trigger and recovery duration.</dd>
+        <dt>Method</dt><dd>No sound is played. Reporting pain or uncertainty activates a session interlock that removes the optional research sound stimuli.</dd>
+        <dt>Output</dt><dd>A structured log for export, not an autonomic measurement. HRV/pupillometry remain part of the separate native-iPhone integration plan and are not claimed by this browser.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Tinnitus spectrum, RI function &amp; tuning curve <span class="chip exp">research battery</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>A frequency-by-frequency tinnitus-likeness spectrum; residual-inhibition depth and duration by masker centre frequency; and the relative masker level needed to just cover the tinnitus.</dd>
+        <dt>Method</dt><dd>Randomised likeness ratings across tone/noise frequencies, comfortable 20-second narrow-band RI probes, and a multi-frequency masker adjustment task. The single-pitch match is retained separately.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">Tinnitus matching and masking vary within a person; order/carry-over and uncalibrated transducers limit comparisons. These curves describe this session only.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Frequency discrimination <span class="chip meas">spectral resolution</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>The smallest detected pitch difference around a 500&nbsp;Hz, 1, 2 or 4&nbsp;kHz reference.</dd>
+        <dt>Method</dt><dd>Two-interval forced choice: identify the higher tone. A 2-down/1-up adaptive track reports the geometric mean of the last reversals in cents and hertz.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">Practice, audibility and the headphones affect the estimate; it is not a calibrated laboratory difference limen.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Gap &amp; temporal-modulation detection <span class="chip meas">temporal resolution</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>The shortest detected silent gap in a noise band, and the smallest detected amplitude-modulation depth at 4, 8, 16 or 32&nbsp;Hz.</dd>
+        <dt>Method</dt><dd>Gap detection uses an adaptive gap/no-gap track with silent catch trials. Modulation detection uses two intervals (steady vs modulated noise) and a 2-down/1-up adaptive depth track.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">Browser scheduling and transducers constrain precision. Human tinnitus studies of gap detection are mixed; neither result is a tinnitus detector.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Binaural lateralisation <span class="chip exp">ILD / ITD</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>Headphone sensitivity to interaural level differences at 4&nbsp;kHz and interaural time differences at 500&nbsp;Hz.</dd>
+        <dt>Method</dt><dd>Two noise bursts carry equal-and-opposite cues; the listener reports left→right versus right→left. Separate 2-down/1-up tracks report dB ILD and microsecond ITD thresholds.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">This is lateralisation inside headphones, not free-field localisation. Channel leakage, mono settings and headphone processing can invalidate it.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Dichotic stream attention <span class="chip exp">selective attention</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>Accuracy while attending to one ear and ignoring a simultaneous competing tone stream in the other.</dd>
+        <dt>Method</dt><dd>Five separately routed tone pairs play; the listener counts high beeps only in the cued ear. The result reports overall, attend-left and attend-right accuracy.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">A short tone-stream paradigm, not a validated dichotic-digits test. Ear differences can reflect audibility, routing, attention or chance and do not establish hemispheric dominance.</dd>
+      </dl>
+    </div>
+
     <div class="models" style="margin-top:6px">
       <p style="font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); font-weight:700; margin:0 0 6px">Mechanistic hypotheses the measurements can inform</p>
       <p style="font-size:.9rem; color:var(--muted); margin:0 0 10px">The measurements are compatible with several overlapping explanations, which may coexist. The panel <strong>does not determine which mechanism is responsible</strong> in an individual — these experiments provide behavioural observations relevant to the models, not a way to select between them. They are theoretical frameworks, not competing diagnoses.</p>
@@ -820,7 +903,7 @@
     <div class="test">
       <h3>Raw session export <span class="chip meas">reproducibility</span></h3>
       <dl class="fields">
-        <dt>Method</dt><dd>A JSON export carries per-frequency thresholds <strong>with posterior SD and trial counts</strong>, catch-trial/false-alarm data, the hardware fingerprint (sample rate, channel check, headphone type), the full tinnitus profile, the frequency-response map, and each reactivity condition's descriptors, stored spectrum and recovery curve.</dd>
+        <dt>Method</dt><dd>A JSON export carries per-frequency thresholds <strong>with posterior SD and trial counts</strong>, catch-trial/false-alarm data, the hardware fingerprint, the full tinnitus profile, reactivity descriptors/spectra/recovery curves, and the raw trial histories from frequency, gap, modulation, binaural and dichotic research tests.</dd>
         <dt>Basis</dt><dd>Exporting <em>observations and posterior state</em> (not just the final numbers) lets a session be re-analysed later with different estimators/priors, or compared against calibrated audiometry — the route from a clever app toward a validation study.</dd>
       </dl>
     </div>
@@ -867,6 +950,17 @@
         <li><a href="https://consensus.app/papers/details/8a33bdecc1de5d40933859b4ca39cf43/">A Bayesian Perspective on Tinnitus Pitch Matching</a> &mdash; McMillan et al., 2014</li>
         <li><a href="https://consensus.app/papers/details/09f2c7df07355e558017a46c2349ca35/">Automated (self-guided) tinnitus pitch matching</a> &mdash; Wunderlich et al., 2015</li>
         <li><a href="https://arxiv.org/abs/1811.03848">Ear-canal acoustics / individual frequency response</a> &mdash; arXiv 1811.03848 (preprint)</li>
+      </ul>
+    </div>
+
+    <div class="test">
+      <h3>Auditory-processing paradigms</h3>
+      <ul style="margin:6px 0 0; padding-left:18px; font-size:.9rem; line-height:1.7">
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8698855/">Verification of a Mobile Psychoacoustic Test System</a> &mdash; frequency discrimination, modulation, gap and binaural tasks</li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4478067/">The Gap Detection Test: Can It Be Used to Diagnose Tinnitus?</a></li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4280753/">Unilateral tinnitus and Gaps-In-Noise performance</a> &mdash; a null result supporting cautious interpretation</li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2921431/">Binaural interference in ITD and ILD lateralisation thresholds</a></li>
+        <li><a href="https://pubmed.ncbi.nlm.nih.gov/24454869/">Selective attention and dichotic auditory streams</a></li>
       </ul>
     </div>
 
@@ -990,14 +1084,21 @@
   function goto(id){ stopAll(); hideAll(); $(id).classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"}); }
 
   /* ---------------- tabs ---------------- */
+  var RESEARCH_VIEWS=["rtmenu","rt_spectrum","rt_rifunc","rt_ttc","rt_gap","rt_freq","rt_mod","rt_space","rt_dichotic","rt_sensitivity"];
+  function hideResearchViews(){ RESEARCH_VIEWS.forEach(function(id){ var el=$(id); if(el) el.classList.add("hidden"); }); }
   function showTab(which){
     stopAll();
-    var cont={quick:"tabQuick", audio:"tabAudio", din:"tabDin"}, btn={quick:"tabBtnQuick", audio:"tabBtnAudio", din:"tabBtnDin"};
+    hideResearchViews();
+    var cont={quick:"tabQuick", audio:"tabAudio", din:"tabDin", research:"tabResearch"}, btn={quick:"tabBtnQuick", audio:"tabBtnAudio", din:"tabBtnDin", research:"tabBtnResearch"};
     Object.keys(cont).forEach(function(k){ $(cont[k]).classList.toggle("hidden", k!==which); $(btn[k]).classList.toggle("active", k===which); });
+    var active=$(cont[which]), defaults={quick:"q_setup",audio:"a_setup",din:"d_setup",research:"r_setup"};
+    if(active && !active.querySelector(".screen:not(.hidden)")) $(defaults[which]).classList.remove("hidden");
+    if(which==="research") renderResearchHome();
   }
   $("tabBtnQuick").addEventListener("click", function(){ showTab("quick"); });
   $("tabBtnAudio").addEventListener("click", function(){ showTab("audio"); });
   $("tabBtnDin").addEventListener("click", function(){ showTab("din"); });
+  $("tabBtnResearch").addEventListener("click", function(){ showTab("research"); });
 
   /* ---------------- landing page ---------------- */
   function enterApp(){ stopAll(); $("landing").classList.add("hidden"); $("app").classList.remove("hidden"); showTab("quick"); window.scrollTo({top:0,behavior:"smooth"}); }
@@ -1006,7 +1107,7 @@
   $("aboutLink").addEventListener("click", showLanding);
   /* ---------------- methods / science panel ---------------- */
   var _methodsPrev=[];
-  var METHODS_VIEWS=["landing","app","oct","therapy","tfi","freqmap","probe","react"];
+  var METHODS_VIEWS=["landing","app","oct","therapy","tfi","freqmap","probe","react"].concat(RESEARCH_VIEWS);
   function showMethods(){
     stopAll();
     _methodsPrev=METHODS_VIEWS.filter(function(id){ var el=$(id); return el && !el.classList.contains("hidden"); });
@@ -1050,6 +1151,9 @@
   }
   var qCal=makeCal("q_vol","q_volReadout","q_calBtn","▶︎ Play reference tone (1 kHz)");
   var aCal=makeCal("a_vol","a_volReadout","a_calBtn","▶︎ Play reference tone (1 kHz)");
+  var rCal=makeCal("r_vol","r_volReadout","r_calBtn","▶︎ Play reference tone (1 kHz)");
+  function researchHome(){ $("app").classList.remove("hidden"); showTab("research"); goto("r_setup"); }
+  $("r_launch").addEventListener("click", function(){ rCal.stop(); A.ceil=Math.min(0.5,rCal.gain()); buildResearch(researchHome); });
 
   /* Device check: verify stereo routing (L/R not reversed/leaking) + read the sample rate.
      No microphone, so true acoustic response can't be measured — this catches the common failures. */
@@ -1499,6 +1603,7 @@
   var PSY_SIGMA=6, LAPSE=0.03, STOP_SD=4.5, MIN_TRIALS=3, MAX_TRIALS=8;
   function pHear(level,theta){ return LAPSE/2 + (1-LAPSE)/(1+Math.exp(-(level-theta)/PSY_SIGMA)); }
   var A={ ceil:0.3, thr:{right:{}, left:{}}, thrSD:{right:{}, left:{}}, thrN:{right:{}, left:{}}, tinHz:null, tinStatus:"not tested", passes:[], char:{}, loudDb:null, mmlDb:null, ri:null, mrilDb:null, type:null, rel:{right:{fa:0,pres:0}, left:{fa:0,pres:0}}, ctch:{right:{n:0,fa:0}, left:{n:0,fa:0}}, hw:null, baseline:null, isRetest:false, freqMap:null, masker:null, reactivity:null, age:null, hp:null };
+  var R={ sensitivity:null, frequency:null, gap:null, modulation:null, spatial:{ild:null,itd:null}, dichotic:null };
   var tracks=[], bag=[], curTi=-1, lastFreq=-1, responded=false, aTimers=[], armStart=0, armEnd=0;
   var curCatch=false, curCatchEar=null, catchTotal=0, lastWasCatch=false, CATCH_MAX=6, P_CATCH=0.12;
   function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
@@ -1976,6 +2081,404 @@
     return h;
   }
 
+  /* ================================================================
+     RESEARCH PSYCHOACOUSTICS (exploratory, uncalibrated / relative)
+     Spectral + temporal + binaural/spatial tests, plus tinnitus-specific
+     functions. These are within-session research measures, not diagnoses.
+     ================================================================ */
+  function comfy(frac){ return A.ceil*(frac||0.3); }
+  function nyq(){ return AC().sampleRate/2; }
+  function rtCSS(v){ return (getComputedStyle(document.body).getPropertyValue(v)||v).trim(); }
+  function rtCanvas(id,w,h){ return '<canvas id="'+id+'" width="'+w+'" height="'+h+'" style="width:100%; height:auto; margin-top:10px; background:var(--panel); border:1px solid var(--line); border-radius:12px"></canvas>'; }
+  function rtPlot(cvId, pts, opt){
+    opt=opt||{}; var cv=$(cvId); if(!cv) return; var ctx=cv.getContext("2d"); var W=cv.width, H=cv.height, pad=34;
+    ctx.clearRect(0,0,W,H);
+    var fmin=Math.log(250), fmax=Math.log(16000);
+    function X(f){ return pad+(Math.log(Math.max(250,Math.min(16000,f)))-fmin)/(fmax-fmin)*(W-pad-10); }
+    var ys=pts.map(function(p){return p.y;}); var ymax=opt.ymax!=null?opt.ymax:(Math.max.apply(null,ys.concat([1]))); var ymin=opt.ymin!=null?opt.ymin:0;
+    function Y(y){ return H-pad-((y-ymin)/((ymax-ymin)||1))*(H-pad-12); }
+    ctx.strokeStyle=rtCSS('--line'); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,10); ctx.lineTo(pad,H-pad); ctx.lineTo(W-4,H-pad); ctx.stroke();
+    ctx.fillStyle=rtCSS('--muted'); ctx.font="11px -apple-system,system-ui,sans-serif";
+    [250,500,1000,2000,4000,8000,16000].forEach(function(f){ var x=X(f); ctx.fillText(f>=1000?(f/1000)+"k":String(f), x-8, H-pad+15); });
+    if(opt.loss && A && A.thr){ var off=aRefOffset(); ctx.fillStyle=rtCSS('--danger'); ctx.globalAlpha=0.09;
+      FREQS.forEach(function(f){ var vs=["left","right"].map(function(e){return A.thr[e][f];}).filter(function(v){return v!=null;}); if(vs.length){ if(Math.min.apply(null,vs)-off>=15){ ctx.fillRect(X(f)-7,10,14,H-pad-10); } } }); ctx.globalAlpha=1; }
+    if(A && A.tinHz){ ctx.strokeStyle=rtCSS('--accent-2'); ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(X(A.tinHz),10); ctx.lineTo(X(A.tinHz),H-pad); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.strokeStyle=rtCSS('--accent'); ctx.lineWidth=2; ctx.beginPath(); pts.forEach(function(p,i){ var x=X(p.x),y=Y(p.y); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+    ctx.fillStyle=rtCSS('--accent'); pts.forEach(function(p){ ctx.beginPath(); ctx.arc(X(p.x),Y(p.y),3.2,0,6.29); ctx.fill(); });
+  }
+  function rtBtn(id,title,sub){ return '<button class="btn-accent2" id="'+id+'" style="width:100%; margin-top:8px; text-align:left; white-space:normal; line-height:1.35">'+title+'<br><small style="font-weight:400; opacity:.85">'+sub+'</small></button>'; }
+  function rtLocked(title,sub){ return '<div class="flag" style="margin-top:8px; border-color:var(--line); background:var(--panel-2); color:var(--muted)"><strong>'+title+'</strong><br><span class="small">'+sub+'</span></div>'; }
+  function soundPainLocked(){ return !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
+  function renderResearchHome(){
+    var el=$("r_summary"); if(!el) return;
+    var rows=[];
+    if(R.sensitivity) rows.push("Sound-sensitivity log: "+(soundPainLocked()?"pain interlock active":"completed"));
+    if(R.frequency) rows.push("Frequency discrimination: "+R.frequency.thresholdCents+" cents at "+fmt(R.frequency.baseHz));
+    if(R.gap) rows.push("Gap detection: "+(R.gap.thresholdMs!=null?R.gap.thresholdMs+" ms":"inconclusive"));
+    if(R.modulation) rows.push("Modulation detection: "+Math.round(R.modulation.depth*100)+"% at "+R.modulation.rateHz+" Hz");
+    if(R.spatial.ild) rows.push("Binaural ILD: "+R.spatial.ild.threshold.toFixed(1)+" dB");
+    if(R.spatial.itd) rows.push("Binaural ITD: "+Math.round(R.spatial.itd.threshold)+" µs");
+    if(R.dichotic) rows.push("Dichotic attention: "+R.dichotic.accuracy+"% correct");
+    el.innerHTML=rows.length?'<div class="divider"></div><strong>Research results in this session</strong><ul style="margin:6px 0 0; padding-left:20px">'+rows.map(function(x){return '<li>'+x+'</li>';}).join("")+'</ul>':'';
+  }
+
+  function buildResearch(backFn){
+    var el=$("rtmenu"), locked=soundPainLocked();
+    el.innerHTML='<p class="title-sm">Research psychoacoustics</p>'+
+      '<p class="small" style="margin-top:0">Spectral, temporal and binaural/spatial paradigms from the auditory literature. Uncalibrated and relative &mdash; not diagnostic. Use headphones and keep every level comfortable.</p>'+
+      rtBtn('rtb_sens','🛡 Sound-sensitivity &amp; recovery log','Provocation-free self-report; activates the pain interlock when appropriate')+
+      (locked?'<div class="flag" style="border-color:var(--danger); background:color-mix(in srgb,var(--danger) 12%,transparent)"><strong>Sound-pain interlock active.</strong> No test sound will be offered here. Update the sound-sensitivity log if this was entered incorrectly.</div>'+rtLocked('Stimulus tests paused','The integration plan requires provocation-free measurement whenever sound causes pain.'):
+      '<div class="divider"></div><p class="title-sm" style="margin-bottom:2px">General auditory processing</p>'+
+      rtBtn('rtb_freq','🎚 Frequency discrimination','Smallest detectable pitch difference around a reference tone')+
+      rtBtn('rtb_gap','⏱ Gap-detection threshold','Shortest silent gap detected in noise (temporal resolution)')+
+      rtBtn('rtb_mod','〰 Temporal modulation detection','Smallest amplitude modulation detected in a noise band')+
+      rtBtn('rtb_space','↔ Binaural lateralisation','Sensitivity to interaural level or timing cues (ILD / ITD)')+
+      rtBtn('rtb_dich','🎧 Dichotic stream attention','Attend to one ear while a competing tone stream plays in the other')+
+      '<div class="divider"></div><p class="title-sm" style="margin-bottom:2px">Tinnitus-specific functions</p>'+
+      rtBtn('rtb_spec','🌈 Tinnitus spectrum / likeness map','Rate how closely each frequency matches your tinnitus &rarr; a spectrum, not one pitch')+
+      rtBtn('rtb_ri','🎯 Residual-inhibition function','Depth &amp; duration of suppression vs masker frequency')+
+      rtBtn('rtb_ttc','📉 Tinnitus tuning curve','Masker level needed to just cover the tinnitus, across frequencies'))+
+      '<button class="btn-ghost" id="rtb_back" style="width:100%; margin-top:12px">&larr; Back to tests</button>';
+    $("rtb_sens").onclick=function(){ buildSensitivity(function(){ buildResearch(backFn); }); };
+    if(!locked){
+      $("rtb_freq").onclick=function(){ buildFrequencyDiscrimination(function(){ buildResearch(backFn); }); };
+      $("rtb_gap").onclick=function(){ buildGap(function(){ buildResearch(backFn); }); };
+      $("rtb_mod").onclick=function(){ buildModulationDetection(function(){ buildResearch(backFn); }); };
+      $("rtb_space").onclick=function(){ buildSpatialLateralisation(function(){ buildResearch(backFn); }); };
+      $("rtb_dich").onclick=function(){ buildDichoticAttention(function(){ buildResearch(backFn); }); };
+      $("rtb_spec").onclick=function(){ buildSpectrum(function(){ buildResearch(backFn); }); };
+      $("rtb_ri").onclick=function(){ buildRIFunc(function(){ buildResearch(backFn); }); };
+      $("rtb_ttc").onclick=function(){ buildTTC(function(){ buildResearch(backFn); }); };
+    }
+    $("rtb_back").onclick=function(){ if(backFn) backFn(); };
+    goto("rtmenu");
+  }
+
+  /* Provocation-free sound-sensitivity / recovery log. The native vitals probe in the
+     integration plan is deliberately not imitated here: a browser cannot measure HRV or
+     pupil response reliably. If sound pain is reported, the research sound tests lock. */
+  function buildSensitivity(backFn){
+    var el=$("rt_sensitivity"), ans=R.sensitivity?Object.assign({},R.sensitivity):{};
+    function seg(key,label,opts){ return '<p class="small" style="margin:12px 0 4px"><strong>'+label+'</strong></p><div class="seg" data-rkey="'+key+'">'+opts.map(function(o){return '<button data-v="'+o[0]+'"'+(ans[key]===o[0]?' class="on"':'')+'>'+o[1]+'</button>';}).join("")+'</div>'; }
+    el.innerHTML='<p class="title-sm">Sound sensitivity &amp; recovery</p>'+
+      '<p class="small" style="margin-top:0"><strong>No sound is played.</strong> This records the reaction to ordinary real-world sound. It cannot measure the autonomic response described in the iOS-vitals plan.</p>'+
+      seg('pain','Do ordinary sounds cause ear pain or burning?',[['no','No'],['yes','Yes'],['unsure','Unsure']])+
+      seg('discomfort','Do ordinary sounds feel excessively loud or uncomfortable?',[['no','No'],['sometimes','Sometimes'],['often','Often']])+
+      seg('reactive','After a sound, does the tinnitus change?',[['no','No'],['louder','Louder'],['quieter','Quieter'],['variable','Varies']])+
+      seg('recovery','If it changes, how long until it returns to baseline?',[['none','No change'],['lt5','< 5 min'],['5to30','5–30 min'],['30to120','30 min–2 h'],['gt120','> 2 h / not yet']])+
+      seg('sudden','Was there a sudden recent hearing change with it?',[['no','No'],['yes','Yes']])+
+      '<label for="rt_trigger" style="margin-top:12px">Typical trigger (optional)</label><input id="rt_trigger" type="text" maxlength="120" placeholder="e.g. dishes, traffic, voices" value="'+String(ans.trigger||'').replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];})+'">'+
+      '<button class="btn-primary" id="rt_sens_done" style="margin-top:14px">Save provocation-free log</button>'+
+      '<button class="btn-ghost" id="rt_sens_cancel" style="width:100%; margin-top:8px">&larr; Cancel</button>';
+    el.querySelectorAll(".seg").forEach(function(s){ s.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ s.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); ans[s.getAttribute("data-rkey")]=b.getAttribute("data-v"); }; }); });
+    $("rt_sens_cancel").onclick=function(){ if(backFn) backFn(); };
+    $("rt_sens_done").onclick=function(){
+      if(!ans.pain){ alert("Please answer the sound-pain question so the safety interlock can be set."); return; }
+      ans.trigger=($("rt_trigger").value||"").trim()||null; ans.recordedAt=new Date().toISOString(); R.sensitivity=ans;
+      var locked=soundPainLocked(), h='<p class="title-sm">Sound-sensitivity log saved</p>';
+      if(locked) h+='<div class="flag" style="border-color:var(--danger); background:color-mix(in srgb,var(--danger) 12%,transparent)"><strong>Provocation-free mode.</strong> Because sound pain was reported or was uncertain, this panel will not offer the research sound stimuli. Do not raise sound to test tolerance or reproduce a trigger.</div>';
+      else h+='<div class="flag" style="border-color:var(--good); background:color-mix(in srgb,var(--good) 10%,transparent)"><strong>No sound pain reported.</strong> Optional research tests remain available at the comfortable ceiling you set.</div>';
+      if(ans.sudden==="yes") h+='<div class="flag" style="border-color:var(--danger); background:color-mix(in srgb,var(--danger) 16%,transparent)"><strong>Seek prompt professional assessment.</strong> A sudden hearing change can be time-sensitive; use local urgent medical services rather than this web test.</div>';
+      h+='<p class="small">This is a structured self-report only. The planned HRV/pupillometry response probe remains a separate native-iPhone research project and is not claimed here.</p><button class="btn-ghost" id="rt_sens_back" style="width:100%; margin-top:10px">&larr; Back to research tests</button>';
+      el.innerHTML=h; $("rt_sens_back").onclick=function(){ if(backFn) backFn(); };
+    };
+    goto("rt_sensitivity");
+  }
+
+  /* 1 · Tinnitus spectrum / likeness map */
+  function buildSpectrum(backFn){
+    var el=$("rt_spectrum");
+    var FS=[500,1000,1500,2000,3000,4000,6000,8000,10000,12000].filter(function(f){ return f<nyq()*0.95; });
+    var order=FS.slice(); for(var i=order.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=order[i]; order[i]=order[j]; order[j]=t; }
+    var idx=0, like={}, useTone=false, cur=null;
+    function play(f){ stopAll(); cur=track(useTone?voice({freq:f}):voice({noise:true, band:f, Q:4, color:"pink"})); cur.setGain(comfy(0.3),0.02); }
+    function render(){
+      if(idx>=order.length) return finish();
+      var f=order[idx];
+      el.innerHTML='<p class="title-sm">Tinnitus spectrum &mdash; '+(idx+1)+' / '+order.length+'</p>'+
+        '<p class="small" style="margin-top:0">How closely does this match your tinnitus? 0 = nothing like it, 10 = exactly like it. It plays automatically.</p>'+
+        '<div class="freq">'+fmt(f)+'<small> Hz</small></div>'+
+        '<div class="seg" id="rt_tt" style="justify-content:center; margin:6px 0"><button data-v="0"'+(!useTone?' class="on"':'')+'>Noise band</button><button data-v="1"'+(useTone?' class="on"':'')+'>Pure tone</button></div>'+
+        '<input type="range" id="rt_like" min="0" max="10" value="'+(like[f]!=null?like[f]:0)+'"><div class="small" style="text-align:center">Likeness: <strong id="rt_likev">'+(like[f]!=null?like[f]:0)+'</strong> / 10</div>'+
+        '<button class="btn-ghost" id="rt_replay" style="margin-top:8px">▶︎ Replay</button>'+
+        '<button class="btn-primary" id="rt_next" style="margin-top:8px">'+(idx===order.length-1?'Finish':'Next')+'</button>'+
+        '<button class="btn-ghost" id="rt_cancel" style="width:100%; margin-top:8px">&larr; Cancel</button>';
+      play(f);
+      var sl=$("rt_like"); sl.oninput=function(){ $("rt_likev").textContent=sl.value; };
+      $("rt_tt").querySelectorAll("button").forEach(function(b){ b.onclick=function(){ useTone=(b.getAttribute("data-v")==="1"); $("rt_tt").querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); b.classList.add("on"); play(f); }; });
+      $("rt_replay").onclick=function(){ play(f); };
+      $("rt_next").onclick=function(){ like[f]=+sl.value; stopAll(); idx++; render(); };
+      $("rt_cancel").onclick=function(){ stopAll(); if(backFn) backFn(); };
+    }
+    function finish(){
+      stopAll();
+      var pts=FS.map(function(f){ return {x:f, y:(like[f]||0)}; });
+      var mx=Math.max.apply(null, pts.map(function(p){return p.y;}).concat([0]));
+      var peak=pts.reduce(function(a,b){ return b.y>a.y?b:a; }, pts[0]);
+      var ext=pts.filter(function(p){ return mx>0 && p.y>=mx*0.5; });
+      var lo=ext.length?Math.min.apply(null,ext.map(function(p){return p.x;})):null, hi=ext.length?Math.max.apply(null,ext.map(function(p){return p.x;})):null;
+      A.spectrum={like:like, peak:(mx>0?peak.x:null), extent:(lo&&hi?[lo,hi]:null)};
+      el.innerHTML='<p class="title-sm">Tinnitus spectrum &mdash; result</p>'+
+        (mx>0?'<div class="resrow"><span class="k">Dominant (peak likeness)</span><span class="v">'+fmt(peak.x)+'</span></div><div class="resrow"><span class="k">Spectral extent (&ge; half-max)</span><span class="v">'+(lo&&hi?fmt(lo)+' – '+fmt(hi):'—')+'</span></div>':'<p class="small">No frequency was rated as matching your tinnitus.</p>')+
+        rtCanvas("rtcv_spec",560,240)+
+        '<p class="small" style="margin-top:8px">Shaded = your loss region; dashed = matched pitch. The tinnitus spectrum usually spans the region of hearing loss rather than one pitch. Uncalibrated &amp; relative.</p>'+
+        '<button class="btn-ghost" id="rt_done" style="width:100%; margin-top:10px">&larr; Back</button>';
+      rtPlot("rtcv_spec", pts, {ymax:10, loss:true});
+      el.querySelector("#rt_done").onclick=function(){ if(backFn) backFn(); };
+    }
+    goto("rt_spectrum"); render();
+  }
+
+  /* 2 · Residual-inhibition function (depth + duration vs masker CF) */
+  function buildRIFunc(backFn){
+    var el=$("rt_rifunc"); var base=A.tinHz||4000;
+    var CFs=[base*0.5, base, base*1.5, base*2].map(Math.round).filter(function(f){ return f>=500 && f<nyq()*0.9; });
+    CFs=CFs.filter(function(v,i,a){ return a.indexOf(v)===i; }).slice(0,4);
+    var STIM=20, idx=0, depth={}, dur={}, timer=null, v=null;
+    function stimulate(cf){
+      el.innerHTML='<p class="title-sm">Residual inhibition &mdash; '+(idx+1)+' / '+CFs.length+'</p>'+
+        '<p class="small" style="margin-top:0">A comfortable narrow band at <strong>'+fmt(cf)+'</strong> plays for '+STIM+'s. Right after it stops, report your tinnitus, then tap when it returns.</p>'+
+        '<div class="freq"><span id="ri_cd">'+STIM+'</span><small> s</small></div>'+
+        '<button class="btn-ghost" id="ri_skip" style="width:100%; margin-top:8px">Skip this frequency</button>';
+      stopAll(); v=track(voice({noise:true, band:cf, Q:2.5, color:"pink"})); v.setGain(comfy(0.32),0.05);
+      var left=STIM; timer=setInterval(function(){ left--; if($("ri_cd"))$("ri_cd").textContent=left; if(left<=0){ clearInterval(timer); stopAll(); ask(cf); } },1000); aTimers.push(timer);
+      $("ri_skip").onclick=function(){ clearInterval(timer); stopAll(); idx++; step(); };
+    }
+    function ask(cf){
+      el.innerHTML='<p class="title-sm">Right after '+fmt(cf)+'</p><p class="small" style="margin-top:0">Your tinnitus is now:</p>'+
+        '<button class="choice" data-d="gone">Gone</button><button class="choice" data-d="quieter">Quieter</button><button class="choice" data-d="same">Unchanged</button><button class="choice" data-d="louder">Louder</button>';
+      el.querySelectorAll("[data-d]").forEach(function(b){ b.onclick=function(){ var d=b.getAttribute("data-d"); depth[cf]=d;
+        if(d==="gone"||d==="quieter"){
+          el.innerHTML='<p class="title-sm">'+fmt(cf)+' &mdash; recovery</p><p class="small" style="margin-top:0">Tap the moment your tinnitus returns to its usual level.</p><div class="freq"><span id="ri_t">0.0</span><small> s</small></div><button class="btn-primary" id="ri_back">Tinnitus is back to normal</button><button class="btn-ghost" id="ri_none" style="width:100%; margin-top:8px">Still suppressed (skip)</button>';
+          var s0=Date.now(); var rt=setInterval(function(){ if($("ri_t"))$("ri_t").textContent=((Date.now()-s0)/1000).toFixed(1); },100); aTimers.push(rt);
+          $("ri_back").onclick=function(){ clearInterval(rt); dur[cf]=(Date.now()-s0)/1000; idx++; step(); };
+          $("ri_none").onclick=function(){ clearInterval(rt); dur[cf]=null; idx++; step(); };
+        } else { dur[cf]=0; idx++; step(); }
+      }; });
+    }
+    function step(){ if(idx>=CFs.length) return finish(); stimulate(CFs[idx]); }
+    function finish(){
+      stopAll(); A.riFunc={depth:depth, dur:dur, cfs:CFs};
+      var dmap={gone:3,quieter:2,same:1,louder:0};
+      var pts=CFs.map(function(f){ return {x:f, y:(dmap[depth[f]]!=null?dmap[depth[f]]:1)}; });
+      var dpts=CFs.map(function(f){ return {x:f, y:(dur[f]||0)}; });
+      el.innerHTML='<p class="title-sm">Residual-inhibition function</p>'+
+        '<p class="small" style="margin-top:0"><strong>Depth</strong> (0 louder &rarr; 3 gone) vs masker frequency:</p>'+rtCanvas("rtcv_ri",560,190)+
+        '<p class="small" style="margin:12px 0 0"><strong>Duration</strong> of suppression (s) vs masker frequency:</p>'+rtCanvas("rtcv_ri2",560,170)+
+        '<p class="small" style="margin-top:8px">RI depth &amp; duration typically increase across the region of hearing loss. Exploratory; a single run is variable.</p>'+
+        '<button class="btn-ghost" id="rt_done" style="width:100%; margin-top:10px">&larr; Back</button>';
+      rtPlot("rtcv_ri", pts, {ymax:3, loss:true});
+      rtPlot("rtcv_ri2", dpts, {loss:true});
+      el.querySelector("#rt_done").onclick=function(){ if(backFn) backFn(); };
+    }
+    goto("rt_rifunc"); step();
+  }
+
+  /* 3 · Tinnitus tuning curve (masker level to cover tinnitus vs CF) */
+  function buildTTC(backFn){
+    var el=$("rt_ttc");
+    if(A.tinStatus!=="matched" || !A.tinHz){ el.innerHTML='<p class="title-sm">Tinnitus tuning curve</p><p class="small">This needs a matched tinnitus pitch first — run the tinnitus battery, then come back.</p><button class="btn-ghost" id="rt_done" style="width:100%; margin-top:10px">&larr; Back</button>'; el.querySelector("#rt_done").onclick=function(){ if(backFn) backFn(); }; goto("rt_ttc"); return; }
+    var p=A.tinHz;
+    var CFs=[0.5,0.7,1.0,1.4,2.0].map(function(m){ return Math.round(p*m); }).filter(function(f){ return f>=250 && f<nyq()*0.9; });
+    CFs=CFs.filter(function(v,i,a){ return a.indexOf(v)===i; });
+    var idx=0, lvl={}, v=null;
+    function toDb(gg){ return Math.round(20*Math.log(Math.max(1e-4,gg))/Math.LN10+DYN); }
+    function measure(cf){
+      var startPct=14;
+      el.innerHTML='<p class="title-sm">Tuning curve &mdash; '+(idx+1)+' / '+CFs.length+'</p>'+
+        '<p class="small" style="margin-top:0">A narrow band at <strong>'+fmt(cf)+'</strong>. Raise it until it <em>just covers</em> your tinnitus, then tap. If it never covers it comfortably, tap the other button.</p>'+
+        '<input type="range" id="ttc_l" min="1" max="100" value="'+startPct+'"><div class="small" style="text-align:center">Level: <strong id="ttc_lv">'+startPct+'%</strong></div>'+
+        '<button class="btn-primary" id="ttc_ok" style="margin-top:8px">Tinnitus is just covered</button>'+
+        '<button class="btn-ghost" id="ttc_no" style="width:100%; margin-top:8px">Can&rsquo;t mask it at a comfortable level</button>';
+      stopAll(); v=track(voice({noise:true, band:cf, Q:3, color:"pink"}));
+      var g0=Math.pow(startPct/100,2)*0.6; v.setGain(A.ceil*Math.max(0.0008,g0),0.03);
+      var sl=$("ttc_l"); sl.oninput=function(){ var gg=Math.pow(sl.value/100,2)*0.6; v.setGain(A.ceil*Math.max(0.0008,gg),0.02); $("ttc_lv").textContent=sl.value+"%"; };
+      $("ttc_ok").onclick=function(){ lvl[cf]=toDb(Math.pow(sl.value/100,2)*0.6); stopAll(); idx++; step(); };
+      $("ttc_no").onclick=function(){ lvl[cf]=null; stopAll(); idx++; step(); };
+    }
+    function step(){ if(idx>=CFs.length) return finish(); measure(CFs[idx]); }
+    function finish(){
+      stopAll(); A.ttc={lvl:lvl, cfs:CFs};
+      var pts=CFs.filter(function(f){ return lvl[f]!=null; }).map(function(f){ return {x:f, y:lvl[f]}; });
+      var shape="—"; if(pts.length>=3){ var vals=pts.map(function(p){return p.y;}); var mn=Math.min.apply(null,vals), mx=Math.max.apply(null,vals); shape=(mx-mn)>=10?"V-shaped (tuned near the pitch)":"flat (broadly maskable)"; }
+      var nm=CFs.filter(function(f){ return lvl[f]===null; }).length;
+      el.innerHTML='<p class="title-sm">Tinnitus tuning curve</p>'+
+        '<p class="small" style="margin-top:0">Masker level needed to just cover the tinnitus, vs masker frequency (lower = easier to mask):</p>'+rtCanvas("rtcv_ttc",560,240)+
+        '<div class="resrow"><span class="k">Shape</span><span class="v" style="font-size:.9rem">'+shape+'</span></div>'+
+        (nm?'<div class="resrow"><span class="k">Non-maskable frequencies</span><span class="v" style="font-size:.9rem">'+nm+' / '+CFs.length+'</span></div>':'')+
+        '<p class="small" style="margin-top:8px">A flat tuning curve (versus a sharp psychoacoustic tuning curve on a matched tone) is a recognised tinnitus subtype. Uncalibrated; relative levels.</p>'+
+        '<button class="btn-ghost" id="rt_done" style="width:100%; margin-top:10px">&larr; Back</button>';
+      rtPlot("rtcv_ttc", pts, {loss:true});
+      el.querySelector("#rt_done").onclick=function(){ if(backFn) backFn(); };
+    }
+    goto("rt_ttc"); step();
+  }
+
+  /* 4 · Gap-detection threshold (adaptive 2-down / 1-up, with catch trials) */
+  function buildGap(backFn){
+    var el=$("rt_gap"); var cf=A.tinHz||2000; if(cf<500) cf=2000;
+    var gap=20, MINR=6, MAXT=45, revs=[], dir=0, nCorr=0, trials=0, hist=[];
+    function playTrial(g, had, done){
+      stopAll(); var c=AC(); var v=track(voice({noise:true, band:cf, Q:1.2, color:"pink"})); var gn=v.gain.gain;
+      var t0=c.currentTime+0.06, lvl=comfy(0.3), dur=0.5, mid=t0+0.22;
+      gn.cancelScheduledValues(c.currentTime); gn.setValueAtTime(1e-4,c.currentTime); gn.linearRampToValueAtTime(lvl,t0+0.012);
+      if(had){ gn.setValueAtTime(lvl,mid); gn.linearRampToValueAtTime(1e-4,mid+0.002); gn.setValueAtTime(1e-4,mid+g/1000); gn.linearRampToValueAtTime(lvl,mid+g/1000+0.002); }
+      gn.setValueAtTime(lvl,t0+dur-0.012); gn.linearRampToValueAtTime(1e-4,t0+dur);
+      aTimers.push(setTimeout(function(){ stopAll(); done(); }, (dur+0.14)*1000));
+    }
+    function render(){
+      var had=Math.random()<0.8;
+      el.innerHTML='<p class="title-sm">Gap detection &mdash; trial '+(trials+1)+'</p>'+
+        '<p class="small" style="margin-top:0">A short burst of noise plays. <strong>Did you hear a brief silent gap</strong> in the middle?</p>'+
+        '<div class="listen" id="gap_l">Listen…</div>'+
+        '<div id="gap_btns" class="hidden"><button class="choice" data-g="1">Yes — I heard a gap</button><button class="choice" data-g="0">No gap</button></div>'+
+        '<button class="btn-ghost" id="gap_cancel" style="width:100%; margin-top:10px">&larr; Cancel</button>';
+      $("gap_cancel").onclick=function(){ stopAll(); if(backFn) backFn(); };
+      playTrial(gap, had, function(){ if($("gap_l"))$("gap_l").classList.add("hidden"); if($("gap_btns"))$("gap_btns").classList.remove("hidden");
+        $("gap_btns").querySelectorAll("[data-g]").forEach(function(b){ b.onclick=function(){ respond(b.getAttribute("data-g")==="1", had); }; });
+      });
+    }
+    function respond(saidGap, had){
+      trials++; var correct=(saidGap===had); hist.push({g:gap, had:had, corr:correct});
+      if(had){ if(correct){ nCorr++; if(nCorr>=2){ nCorr=0; if(dir===1) revs.push(gap); dir=-1; gap=Math.max(2, gap/1.4142); } }
+               else { nCorr=0; if(dir===-1) revs.push(gap); dir=1; gap=Math.min(200, gap*1.4142); } }
+      if(revs.length>=MINR || trials>=MAXT) return finish();
+      render();
+    }
+    function finish(){
+      stopAll();
+      var use=revs.slice(-Math.min(revs.length,6));
+      var thr=use.length? Math.round(Math.exp(use.reduce(function(a,b){return a+Math.log(b);},0)/use.length)) : null;
+      var catches=hist.filter(function(h){return !h.had;}), fa=catches.filter(function(h){return !h.corr;}).length;
+      A.gap={thresholdMs:thr, cf:cf, falseAlarms:fa+"/"+catches.length, reversals:revs.length};
+      R.gap={thresholdMs:thr, carrierHz:cf, falseAlarms:fa, catchTrials:catches.length, reversals:revs.slice(), trials:hist.slice()};
+      el.innerHTML='<p class="title-sm">Gap-detection threshold</p>'+
+        '<div class="resrow"><span class="k">Shortest gap heard (&asymp; threshold)</span><span class="v">'+(thr!=null?thr+' ms':'—')+'</span></div>'+
+        '<div class="resrow"><span class="k">Noise band</span><span class="v" style="font-size:.9rem">'+fmt(cf)+'</span></div>'+
+        '<div class="resrow"><span class="k">False alarms (catch trials)</span><span class="v" style="font-size:.9rem">'+fa+' / '+catches.length+'</span></div>'+
+        '<p class="small" style="margin-top:8px">This measures temporal resolution; studies of tinnitus and gap thresholds are mixed, so it is not a tinnitus detector. Adaptive 2-down/1-up; browser timing, uncalibrated. High false alarms make the threshold unreliable.</p>'+
+        '<button class="btn-ghost" id="rt_done" style="width:100%; margin-top:10px">&larr; Back</button>';
+      el.querySelector("#rt_done").onclick=function(){ if(backFn) backFn(); };
+    }
+    goto("rt_gap"); render();
+  }
+
+  function rtGeoMean(vals){ if(!vals.length) return null; return Math.exp(vals.reduce(function(s,v){return s+Math.log(Math.max(1e-9,v));},0)/vals.length); }
+  function rtAccuracy(hist){ if(!hist.length) return 0; return Math.round(100*hist.filter(function(h){return h.correct;}).length/hist.length); }
+  function rtTonePair(base,cents,higherInterval,done){
+    stopAll(); var c=AC(), dur=0.34, pause=0.24, t0=c.currentTime+0.10, level=comfy(0.24);
+    var high=base*Math.pow(2,cents/1200), fs=higherInterval===1?[high,base]:[base,high];
+    fs.forEach(function(f,i){ var v=track(voice({freq:f})), g=v.gain.gain, ts=t0+i*(dur+pause); g.cancelScheduledValues(c.currentTime); g.setValueAtTime(1e-4,c.currentTime); g.setValueAtTime(1e-4,ts); g.linearRampToValueAtTime(level,ts+0.02); g.setValueAtTime(level,ts+dur-0.02); g.linearRampToValueAtTime(1e-4,ts+dur); });
+    aTimers.push(setTimeout(function(){ stopAll(); done(); },(2*dur+pause+0.22)*1000));
+  }
+
+  /* Frequency discrimination: two-interval forced choice, 2-down/1-up adaptive track. */
+  function buildFrequencyDiscrimination(backFn){
+    var el=$("rt_freq"), base=1000;
+    function intro(){
+      el.innerHTML='<p class="title-sm">Frequency discrimination</p><p class="small" style="margin-top:0">Two tones play. Choose which interval was higher in pitch. The difference adapts toward the smallest reliably detected change.</p>'+
+        '<label for="fd_base">Reference frequency</label><select id="fd_base"><option value="500">500 Hz</option><option value="1000" selected>1 kHz</option><option value="2000">2 kHz</option><option value="4000">4 kHz</option></select>'+
+        '<button class="btn-primary" id="fd_start" style="margin-top:14px">Start frequency discrimination</button><button class="btn-ghost" id="fd_cancel" style="width:100%; margin-top:8px">&larr; Back</button>';
+      $("fd_start").onclick=function(){ base=+$("fd_base").value; run(); }; $("fd_cancel").onclick=function(){ if(backFn) backFn(); }; goto("rt_freq");
+    }
+    function run(){
+      var cents=200, revs=[], dir=0, streak=0, trials=0, hist=[], correctInterval=1, MAX=38;
+      function trial(){
+        correctInterval=Math.random()<0.5?1:2;
+        el.innerHTML='<p class="title-sm">Frequency discrimination &mdash; trial '+(trials+1)+'</p><p class="small" style="margin-top:0">Which tone was higher in pitch?</p><div class="listen" id="fd_listen">Listen: 1 &hellip; 2</div><div class="btn-row hidden" id="fd_answers"><button class="btn-ghost" data-i="1">Tone 1</button><button class="btn-ghost" data-i="2">Tone 2</button></div><button class="btn-ghost" id="fd_abort" style="width:100%; margin-top:10px">&larr; Cancel</button>';
+        $("fd_abort").onclick=function(){ stopAll(); intro(); };
+        rtTonePair(base,cents,correctInterval,function(){ if(!$("fd_answers")) return; $("fd_listen").textContent="Choose the higher tone"; $("fd_answers").classList.remove("hidden"); $("fd_answers").querySelectorAll("button").forEach(function(b){b.onclick=function(){respond(+b.getAttribute("data-i")===correctInterval);};}); });
+      }
+      function respond(correct){
+        var shown=cents, nd;
+        hist.push({trial:trials+1,differenceCents:shown,correct:correct}); trials++;
+        if(correct){ streak++; if(streak<2){ trial(); return; } streak=0; nd=-1; cents=Math.max(2,cents/Math.SQRT2); }
+        else { streak=0; nd=1; cents=Math.min(1200,cents*Math.SQRT2); }
+        if(dir && nd!==dir) revs.push(shown); dir=nd;
+        if((revs.length>=7 && trials>=12)||trials>=MAX) finish(); else trial();
+      }
+      function finish(){
+        stopAll(); var use=revs.slice(-Math.min(6,revs.length)), thr=rtGeoMean(use.length?use:[cents]); thr=Math.round(thr*10)/10;
+        var dhz=base*(Math.pow(2,thr/1200)-1), acc=rtAccuracy(hist);
+        R.frequency={baseHz:base,thresholdCents:thr,thresholdHz:Math.round(dhz*10)/10,reversals:revs.slice(),accuracy:acc,trials:hist};
+        el.innerHTML='<p class="title-sm">Frequency-discrimination result</p><div class="resrow"><span class="k">Difference threshold</span><span class="v">'+thr+' cents</span></div><div class="resrow"><span class="k">At '+fmt(base)+'</span><span class="v" style="font-size:1rem">≈ '+dhz.toFixed(1)+' Hz</span></div><div class="resrow"><span class="k">Task accuracy</span><span class="v" style="font-size:1rem">'+acc+'%</span></div><p class="small">Two-interval, 2-down/1-up adaptive estimate. Lower is finer pitch resolution. Headphones/device and practice affect it; this is not a clinical frequency-difference limen.</p><button class="btn-primary" id="fd_again">Run again</button><button class="btn-ghost" id="fd_done" style="width:100%; margin-top:8px">&larr; Back</button>';
+        $("fd_again").onclick=run; $("fd_done").onclick=function(){if(backFn)backFn();};
+      }
+      trial();
+    }
+    intro();
+  }
+
+  function rtAMInterval(t0,dur,modulated,depth,rate,level){
+    var c=AC(), src=c.createBufferSource(), filt=c.createBiquadFilter(), mod=c.createGain(), env=c.createGain(), lfo=null, lg=null, live=true;
+    src.buffer=colorBuf("pink"); src.loop=true; filt.type="bandpass"; filt.frequency.value=2000; filt.Q.value=0.8; mod.gain.value=modulated?(1-depth/2):1; env.gain.value=1e-4;
+    if(modulated){ lfo=c.createOscillator(); lg=c.createGain(); lfo.frequency.value=rate; lg.gain.value=depth/2; lfo.connect(lg).connect(mod.gain); lfo.start(t0); }
+    src.connect(filt).connect(mod).connect(env).connect(c.destination); env.gain.setValueAtTime(1e-4,c.currentTime); env.gain.setValueAtTime(1e-4,t0); env.gain.linearRampToValueAtTime(level,t0+0.02); env.gain.setValueAtTime(level,t0+dur-0.02); env.gain.linearRampToValueAtTime(1e-4,t0+dur); src.start();
+    return track({stop:function(){if(!live)return;live=false;try{var t=c.currentTime;env.gain.cancelScheduledValues(t);env.gain.setTargetAtTime(1e-4,t,0.01);src.stop(t+0.05);if(lfo)lfo.stop(t+0.05);}catch(e){}}});
+  }
+  function rtAMPair(depth,rate,modInterval,done){
+    stopAll(); var c=AC(), dur=0.72, pause=0.28, t0=c.currentTime+0.10, level=comfy(0.22);
+    rtAMInterval(t0,dur,modInterval===1,depth,rate,level); rtAMInterval(t0+dur+pause,dur,modInterval===2,depth,rate,level);
+    aTimers.push(setTimeout(function(){stopAll();done();},(2*dur+pause+0.24)*1000));
+  }
+
+  /* Temporal modulation detection: identify the modulated interval; modulation depth adapts. */
+  function buildModulationDetection(backFn){
+    var el=$("rt_mod"), rate=8;
+    function intro(){
+      el.innerHTML='<p class="title-sm">Temporal modulation detection</p><p class="small" style="margin-top:0">Two noise bands play. One is steady; one has a regular amplitude ripple. Choose the rippled interval.</p><label for="md_rate">Modulation rate</label><select id="md_rate"><option value="4">4 Hz</option><option value="8" selected>8 Hz</option><option value="16">16 Hz</option><option value="32">32 Hz</option></select><button class="btn-primary" id="md_start" style="margin-top:14px">Start modulation detection</button><button class="btn-ghost" id="md_cancel" style="width:100%; margin-top:8px">&larr; Back</button>';
+      $("md_start").onclick=function(){rate=+$("md_rate").value;run();}; $("md_cancel").onclick=function(){if(backFn)backFn();}; goto("rt_mod");
+    }
+    function run(){
+      var depth=0.75,revs=[],dir=0,streak=0,trials=0,hist=[],answer=1,MAX=38;
+      function trial(){ answer=Math.random()<0.5?1:2; el.innerHTML='<p class="title-sm">Modulation detection &mdash; trial '+(trials+1)+'</p><p class="small" style="margin-top:0">Which noise sounded regularly rippled or pulsed?</p><div class="listen" id="md_listen">Listen: 1 &hellip; 2</div><div class="btn-row hidden" id="md_answers"><button class="btn-ghost" data-i="1">Noise 1</button><button class="btn-ghost" data-i="2">Noise 2</button></div><button class="btn-ghost" id="md_abort" style="width:100%; margin-top:10px">&larr; Cancel</button>'; $("md_abort").onclick=function(){stopAll();intro();}; rtAMPair(depth,rate,answer,function(){if(!$("md_answers"))return;$("md_listen").textContent="Choose the rippled noise";$("md_answers").classList.remove("hidden");$("md_answers").querySelectorAll("button").forEach(function(b){b.onclick=function(){respond(+b.getAttribute("data-i")===answer);};});}); }
+      function respond(correct){ var shown=depth,nd; hist.push({trial:trials+1,depth:shown,correct:correct});trials++; if(correct){streak++;if(streak<2){trial();return;}streak=0;nd=-1;depth=Math.max(0.01,depth/Math.SQRT2);}else{streak=0;nd=1;depth=Math.min(1,depth*Math.SQRT2);}if(dir&&nd!==dir)revs.push(shown);dir=nd;if((revs.length>=7&&trials>=12)||trials>=MAX)finish();else trial(); }
+      function finish(){ stopAll();var use=revs.slice(-Math.min(6,revs.length)),thr=rtGeoMean(use.length?use:[depth]);thr=Math.max(0.01,Math.min(1,thr));var db=20*Math.log(thr)/Math.LN10,acc=rtAccuracy(hist);R.modulation={rateHz:rate,carrierHz:2000,depth:Math.round(thr*1000)/1000,depthDb:Math.round(db*10)/10,reversals:revs.slice(),accuracy:acc,trials:hist};el.innerHTML='<p class="title-sm">Modulation-detection result</p><div class="resrow"><span class="k">Modulation depth threshold</span><span class="v">'+Math.round(thr*100)+'%</span></div><div class="resrow"><span class="k">Log depth</span><span class="v" style="font-size:1rem">'+db.toFixed(1)+' dB</span></div><div class="resrow"><span class="k">Rate · carrier</span><span class="v" style="font-size:1rem">'+rate+' Hz · 2 kHz</span></div><p class="small">Two-interval, 2-down/1-up adaptive estimate. A smaller required depth means finer envelope sensitivity. This browser result is exploratory and depends on the transducer.</p><button class="btn-primary" id="md_again">Run again</button><button class="btn-ghost" id="md_done" style="width:100%; margin-top:8px">&larr; Back</button>';$("md_again").onclick=run;$("md_done").onclick=function(){if(backFn)backFn();}; }
+      trial();
+    }
+    intro();
+  }
+
+  function rtBinauralBurst(mode,amount,side,t0,dur){
+    var c=AC(),src=c.createBufferSource(),f=c.createBiquadFilter(),env=c.createGain(),gl=c.createGain(),gr=c.createGain(),dl=c.createDelay(0.003),dr=c.createDelay(0.003),merge=c.createChannelMerger(2),live=true;
+    src.buffer=colorBuf("white");src.loop=true;f.type="bandpass";f.frequency.value=mode==="itd"?500:4000;f.Q.value=0.8;env.gain.value=1e-4;
+    if(mode==="ild"){var ratio=Math.pow(10,amount/40);gl.gain.value=side<0?ratio:1/ratio;gr.gain.value=side>0?ratio:1/ratio;}else{gl.gain.value=1;gr.gain.value=1;if(side<0)dr.delayTime.value=amount/1000000;else dl.delayTime.value=amount/1000000;}
+    src.connect(f).connect(env);env.connect(gl);env.connect(gr);gl.connect(dl);gr.connect(dr);dl.connect(merge,0,0);dr.connect(merge,0,1);merge.connect(c.destination);env.gain.setValueAtTime(1e-4,c.currentTime);env.gain.setValueAtTime(1e-4,t0);env.gain.linearRampToValueAtTime(comfy(0.18),t0+0.025);env.gain.setValueAtTime(comfy(0.18),t0+dur-0.025);env.gain.linearRampToValueAtTime(1e-4,t0+dur);src.start();
+    return track({stop:function(){if(!live)return;live=false;try{var t=c.currentTime;env.gain.cancelScheduledValues(t);env.gain.setTargetAtTime(1e-4,t,0.01);src.stop(t+0.05);}catch(e){}}});
+  }
+  function rtBinauralPair(mode,amount,firstSide,done){stopAll();var c=AC(),dur=0.34,pause=0.24,t0=c.currentTime+0.10;rtBinauralBurst(mode,amount,firstSide,t0,dur);rtBinauralBurst(mode,amount,-firstSide,t0+dur+pause,dur);aTimers.push(setTimeout(function(){stopAll();done();},(2*dur+pause+0.24)*1000));}
+
+  /* Headphone lateralisation using isolated ILD or ITD cues. */
+  function buildSpatialLateralisation(backFn){
+    var el=$("rt_space");
+    function intro(){el.innerHTML='<p class="title-sm">Binaural lateralisation</p><p class="small" style="margin-top:0">Two noise bursts move in opposite directions inside the headphones. Report the direction. This isolates headphone cues; it is <strong>not</strong> a real-world localisation test.</p><div class="flag" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">Run the L/R device check first if possible. Channel leakage, headphone processing and mono accessibility settings can invalidate this task.</div><button class="btn-accent2" id="sp_ild" style="width:100%;margin-top:12px">Level cue (ILD)</button><button class="btn-accent2" id="sp_itd" style="width:100%;margin-top:8px">Timing cue (ITD)</button><button class="btn-ghost" id="sp_cancel" style="width:100%;margin-top:8px">&larr; Back</button>';$("sp_ild").onclick=function(){run("ild");};$("sp_itd").onclick=function(){run("itd");};$("sp_cancel").onclick=function(){if(backFn)backFn();};goto("rt_space");}
+    function run(mode){
+      var amount=mode==="ild"?6:600,min=mode==="ild"?0.1:15,max=mode==="ild"?20:1200,revs=[],dir=0,streak=0,trials=0,hist=[],first=-1,MAX=40;
+      function trial(){first=Math.random()<0.5?-1:1;el.innerHTML='<p class="title-sm">'+(mode==="ild"?'Level (ILD)':'Timing (ITD)')+' lateralisation &mdash; trial '+(trials+1)+'</p><p class="small" style="margin-top:0">Which way did the sound move?</p><div class="listen" id="sp_listen">Listen: 1 &hellip; 2</div><div class="btn-row hidden" id="sp_answers"><button class="btn-ghost" data-s="-1">Left &rarr; Right</button><button class="btn-ghost" data-s="1">Right &rarr; Left</button></div><button class="btn-ghost" id="sp_abort" style="width:100%;margin-top:10px">&larr; Cancel</button>';$("sp_abort").onclick=function(){stopAll();intro();};rtBinauralPair(mode,amount,first,function(){if(!$("sp_answers"))return;$("sp_listen").textContent="Choose the direction";$("sp_answers").classList.remove("hidden");$("sp_answers").querySelectorAll("button").forEach(function(b){b.onclick=function(){respond(+b.getAttribute("data-s")===first);};});});}
+      function respond(correct){var shown=amount,nd;hist.push({trial:trials+1,amount:shown,correct:correct,firstSide:first<0?"left":"right"});trials++;if(correct){streak++;if(streak<2){trial();return;}streak=0;nd=-1;amount=Math.max(min,amount/Math.SQRT2);}else{streak=0;nd=1;amount=Math.min(max,amount*Math.SQRT2);}if(dir&&nd!==dir)revs.push(shown);dir=nd;if((revs.length>=7&&trials>=12)||trials>=MAX)finish();else trial();}
+      function finish(){stopAll();var use=revs.slice(-Math.min(6,revs.length)),thr=rtGeoMean(use.length?use:[amount]),acc=rtAccuracy(hist);var res={mode:mode,threshold:thr,reversals:revs.slice(),accuracy:acc,trials:hist,carrierHz:mode==="itd"?500:4000};R.spatial[mode]=res;var unit=mode==="ild"?'dB':'µs';el.innerHTML='<p class="title-sm">Binaural '+mode.toUpperCase()+' result</p><div class="resrow"><span class="k">Lateralisation threshold</span><span class="v">'+(mode==="ild"?thr.toFixed(1):Math.round(thr))+' '+unit+'</span></div><div class="resrow"><span class="k">Task accuracy</span><span class="v" style="font-size:1rem">'+acc+'%</span></div><p class="small">Two-interval, 2-down/1-up headphone estimate using '+(mode==="ild"?'interaural level difference at 4 kHz':'interaural time difference at 500 Hz')+'. It does not measure free-field localisation and is not comparable with a calibrated laboratory threshold.</p><button class="btn-primary" id="sp_other">Run '+(mode==="ild"?'ITD':'ILD')+'</button><button class="btn-ghost" id="sp_done" style="width:100%;margin-top:8px">&larr; Back</button>';$("sp_other").onclick=function(){run(mode==="ild"?"itd":"ild");};$("sp_done").onclick=function(){if(backFn)backFn();};}
+      trial();
+    }
+    intro();
+  }
+
+  function rtDichoticStreams(leftSeq,rightSeq,done){
+    stopAll();var c=AC(),t0=c.currentTime+0.12,step=0.38,dur=0.24,level=comfy(0.16),vl=track(voice({freq:700,pan:-1})),vr=track(voice({freq:700,pan:1}));
+    [[vl,leftSeq],[vr,rightSeq]].forEach(function(pair){var v=pair[0],seq=pair[1],g=v.gain.gain;g.cancelScheduledValues(c.currentTime);g.setValueAtTime(1e-4,c.currentTime);seq.forEach(function(high,i){var ts=t0+i*step;v.src.frequency.setValueAtTime(high?1000:700,ts);g.setValueAtTime(1e-4,ts);g.linearRampToValueAtTime(level,ts+0.015);g.setValueAtTime(level,ts+dur-0.015);g.linearRampToValueAtTime(1e-4,ts+dur);});});
+    aTimers.push(setTimeout(function(){stopAll();done();},(leftSeq.length*step+0.20)*1000));
+  }
+  function rtCountPattern(n){var a=[];for(var i=0;i<5;i++)a.push(i<n);return shuffle(a);}
+
+  /* Dichotic selective attention with simultaneous, separately routed tone streams. */
+  function buildDichoticAttention(backFn){
+    var el=$("rt_dichotic"),hist=[],trialNo=0,MAX=10,cue="left",answer=0,leftSeq=[],rightSeq=[];
+    function intro(){el.innerHTML='<p class="title-sm">Dichotic stream attention</p><p class="small" style="margin-top:0">Five simultaneous tone pairs play, one stream in each ear. Attend only to the cued ear and count its higher-pitched beeps.</p><div class="flag" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)">This is a tone-stream selective-attention task, not a validated dichotic-digits test. Headphones and correct L/R routing are essential.</div><button class="btn-primary" id="dc_start" style="margin-top:14px">Start 10 trials</button><button class="btn-ghost" id="dc_cancel" style="width:100%;margin-top:8px">&larr; Back</button>';$("dc_start").onclick=function(){hist=[];trialNo=0;trial();};$("dc_cancel").onclick=function(){if(backFn)backFn();};goto("rt_dichotic");}
+    function trial(){cue=Math.random()<0.5?"left":"right";var lc=1+Math.floor(Math.random()*4),rc=1+Math.floor(Math.random()*4);while(rc===lc)rc=1+Math.floor(Math.random()*4);leftSeq=rtCountPattern(lc);rightSeq=rtCountPattern(rc);answer=cue==="left"?lc:rc;el.innerHTML='<p class="title-sm">Dichotic attention &mdash; '+(trialNo+1)+' / '+MAX+'</p><div class="earlbl '+(cue==="left"?'L':'R')+'">ATTEND TO THE '+cue.toUpperCase()+' EAR</div><p class="small" style="text-align:center">Count only the higher-pitched beeps in that ear.</p><button class="btn-primary" id="dc_play" style="margin-top:10px">Play streams</button><div class="hidden" id="dc_answers" style="margin-top:10px"><p class="small" style="text-align:center">How many high beeps were in the '+cue+' ear?</p><div class="seg" style="justify-content:center"><button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button><button data-n="4">4</button></div></div><button class="btn-ghost" id="dc_abort" style="width:100%;margin-top:10px">&larr; Cancel</button>';$("dc_abort").onclick=function(){stopAll();intro();};$("dc_play").onclick=function(){this.disabled=true;rtDichoticStreams(leftSeq,rightSeq,function(){if(!$("dc_answers"))return;$("dc_answers").classList.remove("hidden");$("dc_answers").querySelectorAll("button").forEach(function(b){b.onclick=function(){respond(+b.getAttribute("data-n"));};});});};}
+    function respond(n){hist.push({trial:trialNo+1,cuedEar:cue,answer:answer,response:n,correct:n===answer});trialNo++;if(trialNo>=MAX)finish();else trial();}
+    function finish(){stopAll();var left=hist.filter(function(h){return h.cuedEar==="left";}),right=hist.filter(function(h){return h.cuedEar==="right";}),acc=rtAccuracy(hist),la=rtAccuracy(left),ra=rtAccuracy(right);R.dichotic={accuracy:acc,leftAccuracy:la,rightAccuracy:ra,trials:hist.slice()};el.innerHTML='<p class="title-sm">Dichotic-attention result</p><div class="resrow"><span class="k">Overall</span><span class="v">'+acc+'%</span></div><div class="resrow"><span class="k">Attend left · right</span><span class="v" style="font-size:1rem">'+la+'% · '+ra+'%</span></div><p class="small">This describes performance on this short competing-tone task. Ear differences can reflect audibility, routing, attention or chance; they are not evidence of hemispheric dominance or a diagnosis.</p><button class="btn-primary" id="dc_again">Run again</button><button class="btn-ghost" id="dc_done" style="width:100%;margin-top:8px">&larr; Back</button>';$("dc_again").onclick=function(){hist=[];trialNo=0;trial();};$("dc_done").onclick=function(){if(backFn)backFn();};}
+    intro();
+  }
+
   /* ---- audiology result ---- */
   function nearestThrDb(hz){ if(hz==null) return null; var best=null,bd=1e9; ["left","right"].forEach(function(e){ FREQS.forEach(function(f){ var v=A.thr[e][f]; if(v!=null){ var d=Math.abs(Math.log(f/hz)); if(d<bd){ bd=d; best=v; } } }); }); return best; }
   // Does the tinnitus pitch fall inside the region of hearing loss? (tonotopic / central-gain check)
@@ -2026,7 +2529,8 @@
       quality:{ presentations:{left:A.rel.left.pres,right:A.rel.right.pres}, falsePresses:{left:A.rel.left.fa,right:A.rel.right.fa},
         catchTrials:{left:A.ctch.left.n,right:A.ctch.right.n}, catchFalseAlarms:{left:A.ctch.left.fa,right:A.ctch.right.fa} },
       retest:(A.isRetest&&A.baseline)?{ baseline:A.baseline.thr }:null,
-      tinnitus:{ status:A.tinStatus, pitchHz:A.tinHz||null, passes:A.passes||[], character:A.char||{}, loudnessRel:A.loudDb, mmlRel:A.mmlDb, mrilRel:A.mrilDb, residualInhibition:A.ri, frequencyResponseMap:A.freqMap||null, maskerSettings:A.masker||null, stimulusReactivity:A.reactivity||null, impact:A.impact||null, phenotype:A.type?A.type.phenotype:null } };
+      tinnitus:{ status:A.tinStatus, pitchHz:A.tinHz||null, passes:A.passes||[], character:A.char||{}, loudnessRel:A.loudDb, mmlRel:A.mmlDb, mrilRel:A.mrilDb, residualInhibition:A.ri, frequencyResponseMap:A.freqMap||null, spectrumLikeness:A.spectrum||null, residualInhibitionFunction:A.riFunc||null, tuningCurve:A.ttc||null, maskerSettings:A.masker||null, stimulusReactivity:A.reactivity||null, impact:A.impact||null, phenotype:A.type?A.type.phenotype:null },
+      research:{ soundSensitivity:R.sensitivity, frequencyDiscrimination:R.frequency, gapDetection:R.gap, temporalModulation:R.modulation, binauralLateralisation:R.spatial, dichoticAttention:R.dichotic } };
     try{ var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="hearing-session.json"; a.click(); setTimeout(function(){ URL.revokeObjectURL(url); },1000); }
     catch(e){ alert("Export failed: "+e); }
   }
@@ -2045,6 +2549,7 @@
     h+=tinRelationship();
     h+='<table class="tt">'+audiogramTable()+'</table>';
     h+=typeHtml(A.type);
+    h+='<button class="btn-accent2" id="a_research" style="width:100%; margin-top:14px">🔬 Open research test suite</button>';
     if(A.tinStatus==="matched"){ h+='<button class="btn-accent2" id="a_freqmap" style="width:100%; margin-top:14px">🎯 Frequency-response map (residual inhibition)</button>';
       h+='<button class="btn-accent2" id="a_probe" style="width:100%; margin-top:8px">🎛 Probe &amp; masker — modulation</button>';
       h+='<button class="btn-accent2" id="a_react" style="width:100%; margin-top:8px">🧪 Spectral stimulus reactivity</button>'; }
@@ -2055,6 +2560,7 @@
     h+='<button class="btn-ghost" id="a_export" style="width:100%; margin-top:8px">⬇ Export raw session (JSON)</button>';
     $("a_resultBody").innerHTML=h;
     $("a_export").addEventListener("click", exportSession);
+    $("a_research").addEventListener("click", function(){ buildResearch(showAResult); });
     if(A.tinStatus==="matched"){
       $("a_impact").addEventListener("click", function(){ buildImpact(A, showAResult); });
       $("a_therapy").addEventListener("click", function(){ buildTherapy(A.tinHz, showAResult); });

@@ -381,6 +381,60 @@
       </dl>
     </div>
 
+    <div class="test">
+      <h3>Sound-sensitivity &amp; recovery log <span class="chip meas">provocation-free</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>Self-reported sound pain/discomfort, tinnitus reactivity, trigger and recovery duration.</dd>
+        <dt>Method</dt><dd>No sound is played. Reporting pain or uncertainty activates a session interlock that removes the optional research sound stimuli.</dd>
+        <dt>Output</dt><dd>A structured log for export, not an autonomic measurement. HRV/pupillometry remain part of the separate native-iPhone integration plan and are not claimed by this browser.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Tinnitus spectrum, RI function &amp; tuning curve <span class="chip exp">research battery</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>A frequency-by-frequency tinnitus-likeness spectrum; residual-inhibition depth and duration by masker centre frequency; and the relative masker level needed to just cover the tinnitus.</dd>
+        <dt>Method</dt><dd>Randomised likeness ratings across tone/noise frequencies, comfortable 20-second narrow-band RI probes, and a multi-frequency masker adjustment task. The single-pitch match is retained separately.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">Tinnitus matching and masking vary within a person; order/carry-over and uncalibrated transducers limit comparisons. These curves describe this session only.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Frequency discrimination <span class="chip meas">spectral resolution</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>The smallest detected pitch difference around a 500&nbsp;Hz, 1, 2 or 4&nbsp;kHz reference.</dd>
+        <dt>Method</dt><dd>Two-interval forced choice: identify the higher tone. A 2-down/1-up adaptive track reports the geometric mean of the last reversals in cents and hertz.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">Practice, audibility and the headphones affect the estimate; it is not a calibrated laboratory difference limen.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Gap &amp; temporal-modulation detection <span class="chip meas">temporal resolution</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>The shortest detected silent gap in a noise band, and the smallest detected amplitude-modulation depth at 4, 8, 16 or 32&nbsp;Hz.</dd>
+        <dt>Method</dt><dd>Gap detection uses an adaptive gap/no-gap track with silent catch trials. Modulation detection uses two intervals (steady vs modulated noise) and a 2-down/1-up adaptive depth track.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">Browser scheduling and transducers constrain precision. Human tinnitus studies of gap detection are mixed; neither result is a tinnitus detector.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Binaural lateralisation <span class="chip exp">ILD / ITD</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>Headphone sensitivity to interaural level differences at 4&nbsp;kHz and interaural time differences at 500&nbsp;Hz.</dd>
+        <dt>Method</dt><dd>Two noise bursts carry equal-and-opposite cues; the listener reports left→right versus right→left. Separate 2-down/1-up tracks report dB ILD and microsecond ITD thresholds.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">This is lateralisation inside headphones, not free-field localisation. Channel leakage, mono settings and headphone processing can invalidate it.</dd>
+      </dl>
+    </div>
+
+    <div class="test">
+      <h3>Dichotic stream attention <span class="chip exp">selective attention</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>Accuracy while attending to one ear and ignoring a simultaneous competing tone stream in the other.</dd>
+        <dt>Method</dt><dd>Five separately routed tone pairs play; the listener counts high beeps only in the cued ear. The result reports overall, attend-left and attend-right accuracy.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">A short tone-stream paradigm, not a validated dichotic-digits test. Ear differences can reflect audibility, routing, attention or chance and do not establish hemispheric dominance.</dd>
+      </dl>
+    </div>
+
     <div class="models" style="margin-top:6px">
       <p style="font-size:.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); font-weight:700; margin:0 0 6px">Mechanistic hypotheses the measurements can inform</p>
       <p style="font-size:.9rem; color:var(--muted); margin:0 0 10px">The measurements are compatible with several overlapping explanations, which may coexist. The panel <strong>does not determine which mechanism is responsible</strong> in an individual — these experiments provide behavioural observations relevant to the models, not a way to select between them. They are theoretical frameworks, not competing diagnoses.</p>
@@ -398,7 +452,7 @@
     <div class="test">
       <h3>Raw session export <span class="chip meas">reproducibility</span></h3>
       <dl class="fields">
-        <dt>Method</dt><dd>A JSON export carries per-frequency thresholds <strong>with posterior SD and trial counts</strong>, catch-trial/false-alarm data, the hardware fingerprint (sample rate, channel check, headphone type), the full tinnitus profile, the frequency-response map, and each reactivity condition's descriptors, stored spectrum and recovery curve.</dd>
+        <dt>Method</dt><dd>A JSON export carries per-frequency thresholds <strong>with posterior SD and trial counts</strong>, catch-trial/false-alarm data, the hardware fingerprint, the full tinnitus profile, reactivity descriptors/spectra/recovery curves, and the raw trial histories from frequency, gap, modulation, binaural and dichotic research tests.</dd>
         <dt>Basis</dt><dd>Exporting <em>observations and posterior state</em> (not just the final numbers) lets a session be re-analysed later with different estimators/priors, or compared against calibrated audiometry — the route from a clever app toward a validation study.</dd>
       </dl>
     </div>
@@ -445,6 +499,17 @@
         <li><a href="https://consensus.app/papers/details/8a33bdecc1de5d40933859b4ca39cf43/">A Bayesian Perspective on Tinnitus Pitch Matching</a> &mdash; McMillan et al., 2014</li>
         <li><a href="https://consensus.app/papers/details/09f2c7df07355e558017a46c2349ca35/">Automated (self-guided) tinnitus pitch matching</a> &mdash; Wunderlich et al., 2015</li>
         <li><a href="https://arxiv.org/abs/1811.03848">Ear-canal acoustics / individual frequency response</a> &mdash; arXiv 1811.03848 (preprint)</li>
+      </ul>
+    </div>
+
+    <div class="test">
+      <h3>Auditory-processing paradigms</h3>
+      <ul style="margin:6px 0 0; padding-left:18px; font-size:.9rem; line-height:1.7">
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8698855/">Verification of a Mobile Psychoacoustic Test System</a> &mdash; frequency discrimination, modulation, gap and binaural tasks</li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4478067/">The Gap Detection Test: Can It Be Used to Diagnose Tinnitus?</a></li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4280753/">Unilateral tinnitus and Gaps-In-Noise performance</a> &mdash; a null result supporting cautious interpretation</li>
+        <li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2921431/">Binaural interference in ITD and ILD lateralisation thresholds</a></li>
+        <li><a href="https://pubmed.ncbi.nlm.nih.gov/24454869/">Selective attention and dichotic auditory streams</a></li>
       </ul>
     </div>
 

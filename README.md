@@ -2,7 +2,7 @@
 
 **[▶ Live demo](https://entertrainment.github.io/hearing-tinnitus-panel/)** · **[Scientific methods](https://entertrainment.github.io/hearing-tinnitus-panel/methods.html)** · [MIT License](LICENSE)
 
-A single-file, offline-capable web app with **two tabs**:
+A single-file, offline-capable web app with **four visible tabs**:
 
 ### 1 · Quick test
 0. **Set your level** — a 1 kHz reference tone + slider; pick a level that's clearly audible but doesn't overshadow your tinnitus. Used for both sweeps.
@@ -32,6 +32,22 @@ A **calibration-free** speech-in-noise screen: three spoken digits over noise, w
 **SNR math (verified against the DiN literature [1'][2']).** SNR in dB is `20·log10(RMS_speech / RMS_noise)`; to change SNR by *N* dB with speech held fixed, the noise **amplitude** is scaled by `10^(−N/20)` — implemented as `noiseGain = 0.10·10^(−snr/20)` (a validated "fix speech, vary noise" mixing method). Since the device speech voice's RMS is unmeasured, the result is a **relative** dB SNR (true SNR = value + an unknown constant). The track uses a **larger 4 dB step until the first reversal, then 2 dB**, and the **SRT = mean of the reversal SNRs, discarding the first** — standard adaptive practice. Simulation: SNR steps are exact (6.00 / 2.00 dB), and the SRT recovers a known threshold to **~0.8 dB**.
 
 Extra references: [1'] Smits et al. 2013, *JASA* (the DiN test); [2'] Smits 2022, *JASA* (1-up/1-down SEM); Van den Borre 2021 (DTT scoping review); Türüdü 2025 (online DiN, mixing-method effects ~1–2 dB, antiphasic vs diotic ~6 dB).
+
+### 4 · Research tests
+
+A directly visible exploratory suite—no need to finish the audiology panel before opening it:
+
+- **Sound-sensitivity & recovery log** — provocation-free self-report. Reporting sound pain or uncertainty activates a pain interlock and removes the sound-provoking research tasks for that session. The planned HRV/pupillometry probe remains a separate native-iPhone project; the browser does not claim to measure autonomic responses.
+- **Frequency discrimination** — two-interval, 2-down/1-up adaptive pitch-difference threshold, reported in cents and hertz.
+- **Gap detection** — adaptive silent-gap-in-noise threshold with no-gap catch trials and a false-alarm count.
+- **Temporal modulation detection** — adaptive amplitude-modulation-depth threshold at 4, 8, 16 or 32 Hz.
+- **Binaural lateralisation** — separate interaural-level-difference (ILD) and interaural-time-difference (ITD) tracks. This measures movement/lateralisation inside headphones, not real-world sound-source localisation.
+- **Dichotic stream attention** — attend to one ear while a competing tone stream plays in the other. This is explicitly a tone-stream task, not a validated dichotic-digits test.
+- **Tinnitus spectrum / likeness map** — rates multiple tone/noise frequencies to describe a spectrum rather than reducing the percept to one pitch.
+- **Residual-inhibition function** — suppression depth and recovery duration as a function of masker centre frequency.
+- **Tinnitus tuning curve** — relative masker level needed to just cover the tinnitus across frequencies.
+
+All research-test results are stored in the raw-session JSON export. They are uncalibrated, within-session measures—not clinical cut-offs or diagnoses.
 
 Results (and, for the audiology panel, the full threshold table + tinnitus profile) are shown on screen and emailed to **you@example.com**.
 
