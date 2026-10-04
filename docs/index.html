@@ -249,14 +249,14 @@
     <!-- UNDER THE HOOD -->
     <section id="hood">
       <h2>Under the hood</h2>
-      <p class="lede">Everything runs client-side on the Web Audio API. No account, no upload — audio is processed locally; only a numeric results summary is ever transmitted (and only if you configure email).</p>
+      <p class="lede">Everything runs client-side on the Web Audio API. No account and no automatic upload: audio, results and saved history remain local unless the user explicitly exports, emails, or consents to the configured results service.</p>
       <ul class="tech">
         <li><b>Bayesian adaptive thresholds (ZEST-inspired).</b> A logistic psychometric posterior over each (ear, frequency), placed at the posterior mean, with informed priors from age, neighbouring frequencies and the other ear — reporting <code>threshold + 95% credible interval + trial count</code>.</li>
         <li><b>Bias controls.</b> Warbled pulsed chirps at a fixed level (reaction-time-proof), shuffled interleaving, and silent <b>catch trials</b> for a signal-detection false-alarm rate.</li>
         <li><b>Speech-in-noise.</b> Adaptive digits-in-noise with <code>SNR = 20·log₁₀(RMS_speech / RMS_noise)</code>; a relative SRT from reversal means.</li>
         <li><b>Tonotopy.</b> A Greenwood place estimate <code>x = log₁₀(f/165.4 + 0.88)/2.1</code> maps pitch and loss edge onto an estimated cochlear coordinate.</li>
         <li><b>Spectral reactivity.</b> Controlled degraded-audio conditions with spectral descriptors (centroid, flatness, crest, HNR) and a 0/5/15/30/60&nbsp;s recovery curve.</li>
-        <li><b>Measurement spine.</b> A schema-versioned session joins safety, capabilities, ordered requested/applied/observed events, repeated check-ins and bounded Sound Lab observations in one exportable record. Digital gain and browser sample rate are never presented as acoustic SPL.</li>
+        <li><b>Measurement spine.</b> A schema-versioned session joins per-session safety, capabilities, ordered requested/applied/observed events, repeated check-ins and bounded Sound Lab observations. A monitored master bus records mixed digital RMS/peak/clipping in dBFS—not acoustic SPL. History supports JSON/CSV export, merge-import and deletion.</li>
       </ul>
     </section>
 

@@ -49,16 +49,17 @@ A directly visible exploratory suite—no need to finish the audiology panel bef
 
 All research-test results are stored in the raw-session JSON export. They are uncalibrated, within-session measures—not clinical cut-offs or diagnoses.
 
-Results (and, for the audiology panel, the full threshold table + tinnitus profile) are shown on screen and emailed to **you@example.com**.
+Results—including the full threshold table and tinnitus profile—are shown on screen and stay local by default. The user may explicitly export them, open a pre-filled email, or consent to the configured results service. Finishing a test never transmits observations automatically.
 
 ### Measurement spine & longitudinal check-ins
 
 The three-part ribbon above the test tabs exposes a shared record used by every module:
 
-- **Protocol-wide safety state** — sudden hearing change or severe neurological/vestibular symptoms switch the app to “seek care first”; ear pain or uncertain/painful sound tolerance switches it to self-report-only mode. Sound-producing entry points remain locked until the safety check is completed.
-- **Capability and quality context** — AudioContext state, browser sample rate, latency where exposed, stereo-routing result, headphones and browser are exported alongside the measurements. These are device facts, not an acoustic calibration.
-- **Momentary check-ins** — tinnitus prominence, perceived loudness, distress, stress, sound tolerance, context and the immediate relationship to external sound are stored locally. A small trend shows recent prominence without collapsing the other dimensions into one score.
-- **Auditable event stream** — requested, applied and observed events use a session ID, increasing sequence, wall-clock time and monotonic elapsed time. The JSON export includes the event stream, check-ins, safety record and Sound Lab observations under schema version 2.
+- **Protocol-wide safety state** — sudden hearing change or severe neurological/vestibular symptoms switch the app to “seek care first”; ear pain or uncertain/painful sound tolerance switches it to self-report-only mode. The check must be reconfirmed after every page load; a previous “allowed” answer never silently authorises a later session.
+- **Capability and quality context** — AudioContext state, browser sample rate, latency where exposed, stereo-routing result, headphones and browser are exported alongside the measurements. A monitored master bus also records mixed digital RMS, peak and clipping in dBFS. These are device/signal facts, not an acoustic calibration; operating-system speech sits outside that monitor.
+- **Momentary check-ins** — tinnitus prominence, perceived loudness, distress, stress, sound tolerance, context and the immediate relationship to external sound are stored locally. Separate trends preserve each dimension. JSON/CSV export, merge-import, per-record deletion and full local-history deletion are available from Session Trace.
+- **Auditable event stream** — requested, applied and observed events use a session ID, increasing sequence, wall-clock time and monotonic elapsed time. The JSON export includes the event stream, check-ins, safety record, digital-signal summary and Sound Lab observations under schema version 3.
+- **Emergency stop** — the persistent ribbon can stop every active Web Audio voice and operating-system speech immediately from any test screen.
 
 Local history stays in that browser until the user exports it. No microphone is used and the page does not claim room acoustics, autonomic sensing or acoustic SPL.
 
@@ -83,7 +84,7 @@ Runs in any modern browser on any device (iOS Safari, Android Chrome, desktop). 
 
 ## Optional: email results from your Outlook (Microsoft Graph)
 
-By default results are delivered via **Netlify Forms** (dashboard notification) and the **mailto** button. If you'd rather have each result emailed automatically **from your own Outlook**, deploy the included serverless function — [`netlify/functions/send-result.js`](netlify/functions/send-result.js). The site POSTs each result to it; it sends the email server-side via Microsoft Graph. **Credentials live only in Netlify environment variables — never in the page or the repo.**
+Results are never delivered automatically. The **Email results** button opens a pre-filled message in the user's mail app. A separate **Send to configured results service…** button displays a health-data consent prompt and only then tries the optional Netlify/Outlook delivery path. To enable that explicit-send path, deploy [`netlify/functions/send-result.js`](netlify/functions/send-result.js); it sends server-side via Microsoft Graph. **Credentials live only in Netlify environment variables—never in the page or the repo.**
 
 > Why not put credentials in the page? A static site's JavaScript is fully visible to anyone. OAuth tokens/secrets there would expose your whole mailbox. The serverless function is the safe place for them.
 
@@ -98,7 +99,7 @@ By default results are delivered via **Netlify Forms** (dashboard notification) 
    - `RESULT_TO` = `you@example.com` (optional; defaults to `MS_SENDER`)
    - `ALLOWED_ORIGINS` = your deployed URL, e.g. `https://your-site.netlify.app` (recommended)
    - `RESULT_TOKEN` = optional shared token (see note below)
-3. Redeploy. Results now arrive in your Outlook. The result screen shows "✓ Result emailed to your Outlook" when the function accepts it.
+3. Redeploy. After a result, the user can choose **Send to configured results service…**, review the consent prompt, and send it. The result screen confirms only when the service accepts it.
 
 **Abuse hardening (built in).** The endpoint is public, so the function includes: the **recipient is fixed server-side** (never taken from the request — so it can't be an open relay, only ever emails you), **origin allow-listing** (`ALLOWED_ORIGINS`, else same-site only), a **request-size cap**, **per-IP best-effort rate limiting**, a **honeypot**, and payload validation. `RESULT_TOKEN` adds a required header — but note a static site can't truly keep a secret, so it's friction, not real auth. Worst case without a token is someone spamming *your* inbox with junk results; the rate limit + origin check make that impractical.
 
@@ -168,7 +169,7 @@ These turn the panel from "a clever tone player" into an instrument that knows w
 
 **Drag & drop:** go to **https://app.netlify.com/drop** and drop the `hearing-test` **folder**. You get a live URL instantly.
 
-**Email delivery:** the app posts results to a **Netlify Form** named `hearing-test`. After deploying, submit one result, then in the Netlify dashboard: **Site → Forms → hearing-test → Add notification → Email** → `you@example.com`. From then on every result (quick test or full audiology, including the audiogram numbers and tinnitus profile) is emailed automatically and stored in the dashboard.
+**Optional result delivery:** the app includes a **Netlify Form** named `hearing-test`, but it is only posted after the user presses **Send to configured results service…** and accepts the health-data consent prompt. In Netlify: **Site → Forms → hearing-test → Add notification → Email** → `you@example.com`. GitHub Pages has no result backend, so its button directs the user to Email results or JSON export instead.
 
 **Fallback everywhere:** each result screen also has an **"Email results"** button that opens the tester's own mail app pre-filled and addressed to you — works even without the Netlify setup. (The audiogram *image* is a separate **Download PNG** button, since email links can't carry an attachment.)
 

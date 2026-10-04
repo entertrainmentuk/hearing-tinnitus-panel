@@ -26,8 +26,8 @@ test("static markup does not contain duplicate ids", () => {
 
 test("measurement spine schema and local history are present", () => {
   for (const marker of [
-    'schemaVersion:2',
-    'protocolVersion:"2026.10"',
+    'schemaVersion:3',
+    'protocolVersion:"2026.10.1"',
     'spineEvent("sound_lab","session","requested"',
     'spineEvent("sound_lab","session","applied"',
     'spineEvent("sound_lab","response","observed"',
@@ -37,6 +37,40 @@ test("measurement spine schema and local history are present", () => {
   ]) {
     assert.ok(app.includes(marker), `missing ${marker}`);
   }
+});
+
+test("safety is reconfirmed per page session", () => {
+  assert.match(app, /safety:null,lastSafety:saved\.lastSafety\|\|saved\.safety\|\|null/);
+  assert.match(app, /if\(!MS\.safety\) buildSafetyForm\(\)/);
+  assert.doesNotMatch(app, /safety:saved\.safety\|\|null/);
+});
+
+test("test completion never transmits automatically", () => {
+  const calls = [...app.matchAll(/submitNetlify\(/g)];
+  assert.equal(calls.length, 0);
+  assert.match(app, /function sendConfigured\(d\)/);
+  assert.match(app, /if\(!confirm\("Send this result/);
+});
+
+test("local history has explicit export, import and deletion controls", () => {
+  for (const id of ["sh_export", "sh_csv", "sh_import", "sh_clear"]) {
+    assert.ok(app.includes(`id="${id}"`), `missing ${id}`);
+  }
+  assert.match(app, /function importHistoryFile\(file\)/);
+  assert.match(app, /function clearSavedHistory\(\)/);
+  assert.match(app, /if\(\/\^\[=\+\\-@\]\//, "CSV export must neutralize spreadsheet formulas");
+});
+
+test("all Web Audio signals use the monitored master output", () => {
+  assert.match(app, /masterGain\.connect\(deliveredAnalyser\)\.connect\(actx\.destination\)/);
+  const direct = app.match(/\.connect\(c\.destination\)/g) || [];
+  assert.equal(direct.length, 0);
+  assert.match(app, /digitalOutput:digitalSummary\(\)/);
+});
+
+test("a persistent emergency stop is present", () => {
+  assert.ok(app.includes('id="spineStop"'));
+  assert.match(app, /spineStop"\)\.addEventListener\("click"/);
 });
 
 test("all top-level sound-producing entry points use the shared gate", () => {

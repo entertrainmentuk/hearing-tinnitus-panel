@@ -114,7 +114,7 @@
 
   <p class="stamp" style="margin:0 0 26px"><strong>Current scope.</strong> The present implementation is designed for exploratory, repeated <strong>single-subject</strong> measurements. It is not validated for population-level inference or clinical decision-making, and one person's result does not validate any mechanism.</p>
 
-  <div class="callout"><strong>Measurement spine.</strong> Every session has a versioned ID and an ordered event stream (requested → applied → observed), plus one shared safety state, device capabilities, repeated momentary check-ins and bounded Sound Lab observations. History remains in this browser until exported. Browser sample rate and digital gain are engineering context only: neither measures acoustic dB SPL at the ear.</div>
+  <div class="callout"><strong>Measurement spine.</strong> Every session has a versioned ID and an ordered event stream (requested → applied → observed), a freshly reconfirmed safety state, device capabilities, repeated momentary check-ins and bounded Sound Lab observations. A monitored master bus reports mixed digital RMS/peak/clipping in dBFS; operating-system speech is outside it. History remains local unless explicitly exported, emailed or consented to the configured service. None of these engineering values measures acoustic dB SPL at the ear.</div>
 
   <nav class="toc">
     <p>Contents</p>
