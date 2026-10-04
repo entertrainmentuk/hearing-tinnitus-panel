@@ -97,6 +97,28 @@
   @keyframes breathe{ 0%,100%{opacity:.45} 50%{opacity:1} }
   @media (prefers-reduced-motion: reduce){ .bar>span{transition:none} .listen{animation:none} }
 
+  /* Measurement spine: a persistent, inspectable trace across every test. */
+  .session-ribbon{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:-2px 0 14px}
+  .trace-pill{min-width:0;text-align:left;padding:9px 10px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:11px;box-shadow:0 3px 12px rgba(20,40,70,.04)}
+  .trace-pill span{display:block;color:var(--muted);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .trace-pill strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;margin-top:2px}
+  .trace-pill[data-state="ok"] strong{color:var(--good)}
+  .trace-pill[data-state="warn"] strong{color:#b45309}
+  .trace-pill[data-state="stop"] strong{color:var(--danger)}
+  .spine-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}
+  .spine-stat{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:11px}
+  .spine-stat span{display:block;color:var(--muted);font-size:.72rem}
+  .spine-stat strong{display:block;font-size:.94rem;margin-top:3px}
+  .field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .field-grid select,.field-grid textarea,select,textarea{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--text);font:inherit}
+  textarea{min-height:74px;resize:vertical}
+  .checkline{display:flex;gap:9px;align-items:flex-start;margin:10px 0;color:var(--text);font-size:.87rem;line-height:1.4}
+  .checkline input{width:auto;margin-top:3px;accent-color:var(--accent)}
+  .trend{display:flex;align-items:flex-end;gap:4px;height:72px;padding:8px 3px 0;border-bottom:1px solid var(--line);margin-top:8px}
+  .trend i{display:block;flex:1;min-width:5px;border-radius:4px 4px 0 0;background:linear-gradient(var(--accent-2),var(--accent));opacity:.82}
+  .timer{font-variant-numeric:tabular-nums;font-size:2.1rem;font-weight:800;text-align:center;letter-spacing:.03em;margin:12px 0 4px}
+  @media(max-width:430px){.session-ribbon{grid-template-columns:1fr 1fr}.trace-pill:last-child{grid-column:1/-1}.field-grid{grid-template-columns:1fr}}
+
   /* ===== Methods / science panel — fully scoped under #methods ===== */
   #methods{
     --m-panel:#ffffff; --m-panel2:#eef2f7; --m-line:#dce3ec; --m-line2:#c8d2df;
@@ -325,6 +347,12 @@
   <h1>Hearing &amp; Tinnitus Panel</h1>
   <p class="sub">Quick screening, per-ear audiometry, speech-in-noise, tinnitus characterisation and exploratory auditory-processing tests. <strong>Not a diagnostic audiogram</strong> — relative, self-referenced measures.</p>
 
+  <div class="session-ribbon" aria-label="Session trace">
+    <button class="trace-pill" id="spineSafety" data-state="warn"><span>Safety</span><strong>Check needed</strong></button>
+    <button class="trace-pill" id="spineDevice"><span>Device</span><strong>Not checked</strong></button>
+    <button class="trace-pill" id="spineHistory"><span>Check-ins</span><strong>0 saved</strong></button>
+  </div>
+
   <div class="tabs">
     <div class="tab active" id="tabBtnQuick" role="button" tabindex="0">Quick</div>
     <div class="tab" id="tabBtnAudio" role="button" tabindex="0">Audiology</div>
@@ -551,6 +579,8 @@
   <section class="card screen hidden" id="rt_space"></section>
   <section class="card screen hidden" id="rt_dichotic"></section>
   <section class="card screen hidden" id="rt_sensitivity"></section>
+  <section class="card screen hidden" id="session_hub"></section>
+  <section class="card screen hidden" id="checkin"></section>
 
   <!-- ============================ METHODS / SCIENCE PANEL ============================ -->
   <section id="methods" class="hidden" aria-label="Scientific methods reference">
@@ -564,6 +594,8 @@
   </div>
 
   <p class="stamp" style="margin:0 0 26px"><strong>Current scope.</strong> The present implementation is designed for exploratory, repeated <strong>single-subject</strong> measurements. It is not validated for population-level inference or clinical decision-making, and one person's result does not validate any mechanism.</p>
+
+  <div class="callout"><strong>Measurement spine.</strong> Every session has a versioned ID and an ordered event stream (requested → applied → observed), plus one shared safety state, device capabilities, repeated momentary check-ins and bounded Sound Lab observations. History remains in this browser until exported. Browser sample rate and digital gain are engineering context only: neither measures acoustic dB SPL at the ear.</div>
 
   <nav class="toc">
     <p>Contents</p>
@@ -1028,6 +1060,46 @@
   var $=function(id){return document.getElementById(id);};
   var TAU=Math.PI*2;
 
+  /* ---------------- measurement spine ----------------
+     requested -> applied -> observed records, stored locally and included in export. */
+  var SPINE_KEY="entertrainment.hearing.spine.v2";
+  function spineId(){ return "htp-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9); }
+  function spineLoad(){
+    var saved={}; try{ saved=JSON.parse(localStorage.getItem(SPINE_KEY)||"{}"); }catch(e){}
+    return {schemaVersion:2,protocolVersion:"2026.10",sessionId:spineId(),startedAt:new Date().toISOString(),sequence:0,events:[],
+      safety:saved.safety||null,checkins:Array.isArray(saved.checkins)?saved.checkins:[],soundSessions:Array.isArray(saved.soundSessions)?saved.soundSessions:[]};
+  }
+  var MS=spineLoad();
+  function spinePersist(){
+    try{ localStorage.setItem(SPINE_KEY,JSON.stringify({safety:MS.safety,checkins:MS.checkins.slice(-180),soundSessions:MS.soundSessions.slice(-100)})); }catch(e){}
+  }
+  function spineEvent(test,phase,event,details){
+    MS.events.push({sequence:++MS.sequence,sessionId:MS.sessionId,wallTime:new Date().toISOString(),monotonicMs:Math.round(performance.now()),test:test,phase:phase,event:event,details:details||{}});
+    if(MS.events.length>2500) MS.events.shift(); updateSpineRibbon();
+  }
+  function safetyMode(){ return MS.safety?MS.safety.mode:"unchecked"; }
+  function soundBlocked(){ return safetyMode()==="self_report_only"||safetyMode()==="urgent"; }
+  function requireSoundSafety(){
+    if(!MS.safety){ spineEvent("safety","gate","required",{}); buildSessionHub(true); return false; }
+    if(soundBlocked()){ spineEvent("safety","gate","blocked",{mode:safetyMode()}); buildSessionHub(false); return false; }
+    return true;
+  }
+  function capabilitySnapshot(){
+    var c=actx, hw=(typeof A!=="undefined"&&A.hw)||{};
+    return {audioContext:!!(window.AudioContext||window.webkitAudioContext),state:c?c.state:"not started",sampleRate:c?c.sampleRate:(hw.sampleRate||null),baseLatency:c&&c.baseLatency!=null?c.baseLatency:null,outputLatency:c&&c.outputLatency!=null?c.outputLatency:null,channelCheck:hw.channels||"unchecked",speechSynthesis:!!window.speechSynthesis,userAgent:navigator.userAgent};
+  }
+  function updateSpineRibbon(){
+    if(!$('spineSafety')) return;
+    var mode=safetyMode(), label={unchecked:"Check needed",allowed:"Sound allowed",reduced:"Use caution",self_report_only:"Self-report only",urgent:"Seek care first"}[mode]||mode;
+    $("spineSafety").querySelector("strong").textContent=label;
+    $("spineSafety").dataset.state=mode==="allowed"?"ok":(mode==="urgent"||mode==="self_report_only"?"stop":"warn");
+    var cp=capabilitySnapshot(), device=cp.channelCheck!=="unchecked"?cp.channelCheck:(cp.sampleRate?Math.round(cp.sampleRate/1000)+" kHz audio":"Not checked");
+    $("spineDevice").querySelector("strong").textContent=device;
+    $("spineDevice").dataset.state=cp.channelCheck!=="unchecked"?"ok":"";
+    $("spineHistory").querySelector("strong").textContent=MS.checkins.length+" saved";
+    $("spineHistory").dataset.state=MS.checkins.length?"ok":"";
+  }
+
   /* ---------------- shared audio ---------------- */
   var actx=null;
   function AC(){ if(!actx){ var A=window.AudioContext||window.webkitAudioContext; actx=new A(); } if(actx.state==="suspended"&&actx.resume) actx.resume(); return actx; }
@@ -1074,14 +1146,56 @@
       stop:function(){ if(!live) return; live=false; try{ var t=c.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.exponentialRampToValueAtTime(1e-4,t+0.05); src.stop(t+0.08);}catch(e){} }
     };
   }
-  var activeVoices=[];
+  var activeVoices=[], soundLabCleanup=null;
   function track(v){ activeVoices.push(v); return v; }
-  function stopAll(){ activeVoices.forEach(function(v){ try{v.stop();}catch(e){} }); activeVoices=[]; if(typeof aTimers!=="undefined" && aTimers){ aTimers.forEach(function(t){clearTimeout(t);}); aTimers=[]; } if(rafId){cancelAnimationFrame(rafId); rafId=null;} if(window.speechSynthesis){ try{ speechSynthesis.cancel(); }catch(e){} } }
+  function stopAll(){ activeVoices.forEach(function(v){ try{v.stop();}catch(e){} }); activeVoices=[]; if(soundLabCleanup){ var cleanup=soundLabCleanup; soundLabCleanup=null; cleanup("navigation"); } if(typeof aTimers!=="undefined" && aTimers){ aTimers.forEach(function(t){clearTimeout(t);}); aTimers=[]; } if(rafId){cancelAnimationFrame(rafId); rafId=null;} if(window.speechSynthesis){ try{ speechSynthesis.cancel(); }catch(e){} } }
 
   /* ---------------- screen manager ---------------- */
   var rafId=null;
   function hideAll(){ var s=document.querySelectorAll(".screen"); for(var i=0;i<s.length;i++) s[i].classList.add("hidden"); }
   function goto(id){ stopAll(); hideAll(); $(id).classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"}); }
+
+  function scaleField(id,label,value){ return '<label for="'+id+'">'+label+' <strong id="'+id+'v">'+value+'</strong>/10</label><input type="range" id="'+id+'" min="0" max="10" value="'+value+'">'; }
+  function wireScale(id){ var e=$(id); if(e) e.addEventListener("input",function(){ $(id+"v").textContent=e.value; }); }
+  function safetySummary(){
+    if(!MS.safety) return "No safety check recorded.";
+    return {allowed:"No safety flags reported; comfortable-level sound tasks remain optional.",reduced:"A clinical flag was reported. Use caution and arrange appropriate assessment.",self_report_only:"Sound-provoking tasks are locked. Self-report check-ins remain available.",urgent:"Sound-provoking tasks are locked. Seek prompt professional assessment before testing."}[MS.safety.mode];
+  }
+  function buildSafetyForm(){
+    $("session_hub").innerHTML='<p class="title-sm">Session safety check</p><p class="small" style="margin-top:0">This check controls sound-producing tasks across the panel. It is not a diagnosis. Choose the cautious answer when unsure.</p>'+
+      '<label class="checkline"><input type="checkbox" id="sf_sudden"> Sudden or rapidly worsening hearing change, especially in one ear</label>'+
+      '<label class="checkline"><input type="checkbox" id="sf_pulse"> Tinnitus that beats in time with your pulse</label>'+
+      '<label class="checkline"><input type="checkbox" id="sf_vertigo"> New severe vertigo, facial weakness, numbness or other neurological symptoms</label>'+
+      '<label class="checkline"><input type="checkbox" id="sf_ear"> Ear pain, discharge, or a suspected active ear problem</label>'+
+      '<div class="divider"></div><label for="sf_sound">Do ordinary comfortable sounds cause ear pain?</label><select id="sf_sound"><option value="no">No</option><option value="unsure">Unsure</option><option value="yes">Yes</option></select>'+
+      '<button class="btn-primary" id="sf_save" style="margin-top:16px">Save safety state</button><button class="btn-ghost" id="sf_cancel" style="width:100%;margin-top:8px">Back</button>';
+    if(MS.safety){ ["sudden","pulse","vertigo","ear"].forEach(function(k){ $("sf_"+k).checked=!!MS.safety[k]; }); $("sf_sound").value=MS.safety.soundPain||"no"; }
+    $("sf_save").onclick=function(){
+      var s={sudden:$("sf_sudden").checked,pulse:$("sf_pulse").checked,vertigo:$("sf_vertigo").checked,ear:$("sf_ear").checked,soundPain:$("sf_sound").value,recordedAt:new Date().toISOString()};
+      s.mode=(s.sudden||s.vertigo)?"urgent":((s.ear||s.soundPain!=="no")?"self_report_only":(s.pulse?"reduced":"allowed")); MS.safety=s; spinePersist(); spineEvent("safety","screen","observed",s); buildSessionHub(false);
+    };
+    $("sf_cancel").onclick=function(){ buildSessionHub(false); };
+    goto("session_hub");
+  }
+  function trendBars(){
+    var a=MS.checkins.slice(-14); if(!a.length) return '<p class="small">No check-ins yet. A short check-in records how you feel now without playing sound.</p>';
+    return '<div class="trend" aria-label="Recent tinnitus prominence trend">'+a.map(function(x){ return '<i title="'+x.at+' · '+x.prominence+'/10" style="height:'+Math.max(5,x.prominence*6)+'px"></i>'; }).join("")+'</div><p class="small" style="margin-top:5px">Recent tinnitus prominence (oldest → newest). Separate loudness, distress and context remain in the export.</p>';
+  }
+  function buildSessionHub(forceSafety){
+    if(forceSafety&&!MS.safety){ buildSafetyForm(); return; }
+    var cp=capabilitySnapshot(), mode=safetyMode();
+    $("session_hub").innerHTML='<p class="title-sm">Session trace</p><p class="small" style="margin-top:0">One inspectable record joins safety, device context, test events, repeated check-ins and Sound Lab observations. Stored only in this browser until you export it.</p>'+
+      '<div class="flag" style="'+(mode==="urgent"||mode==="self_report_only"?'':'border-color:var(--line);background:var(--panel-2);color:var(--muted)')+'"><strong>Safety · '+mode.replaceAll("_"," ")+'</strong><br>'+safetySummary()+'</div>'+
+      '<div class="spine-grid"><div class="spine-stat"><span>Session ID</span><strong>'+MS.sessionId.slice(-10)+'</strong></div><div class="spine-stat"><span>Events</span><strong>'+MS.events.length+'</strong></div><div class="spine-stat"><span>Audio context</span><strong>'+cp.state+'</strong></div><div class="spine-stat"><span>Sample rate</span><strong>'+(cp.sampleRate?cp.sampleRate+' Hz':'Not started')+'</strong></div><div class="spine-stat"><span>Stereo route</span><strong>'+cp.channelCheck+'</strong></div><div class="spine-stat"><span>Saved check-ins</span><strong>'+MS.checkins.length+'</strong></div></div>'+trendBars()+
+      '<button class="btn-primary" id="sh_checkin">Record a check-in</button><div class="btn-row"><button class="btn-ghost" id="sh_safety">'+(MS.safety?'Update':'Complete')+' safety check</button><button class="btn-ghost" id="sh_export">Export full record</button></div><button class="btn-ghost" id="sh_back" style="width:100%;margin-top:8px">Back to tests</button>';
+    $("sh_checkin").onclick=buildCheckin; $("sh_safety").onclick=buildSafetyForm; $("sh_export").onclick=exportSession; $("sh_back").onclick=function(){ showTab("quick"); goto("q_setup"); }; goto("session_hub");
+  }
+  function buildCheckin(){
+    $("checkin").innerHTML='<p class="title-sm">Momentary check-in</p><p class="small" style="margin-top:0">Record the moment as it is. Prominence, perceived loudness and distress are deliberately separate.</p><div class="field-grid"><div>'+scaleField("ci_prom","Prominence",5)+'</div><div>'+scaleField("ci_loud","Perceived loudness",5)+'</div><div>'+scaleField("ci_dist","Distress",3)+'</div><div>'+scaleField("ci_stress","Stress",3)+'</div></div><div class="divider"></div><div class="field-grid"><div><label for="ci_tol">Sound tolerance</label><select id="ci_tol"><option>comfortable</option><option>sensitive</option><option>painful</option><option>uncertain</option></select></div><div><label for="ci_env">Current setting</label><select id="ci_env"><option>quiet room</option><option>home activity</option><option>work</option><option>outdoors</option><option>travel</option><option>social</option><option>bedtime</option></select></div><div><label for="ci_sound">External sound just now</label><select id="ci_sound"><option value="none">none / not noted</option><option value="quieter">tinnitus quieter</option><option value="same">unchanged</option><option value="louder">tinnitus louder</option><option value="uncertain">uncertain</option></select></div></div><label for="ci_note" style="margin-top:12px">Optional note</label><textarea id="ci_note" maxlength="500" placeholder="Sleep, exposure, activity, medication change, or anything relevant…"></textarea><button class="btn-primary" id="ci_save" style="margin-top:14px">Save check-in</button><button class="btn-ghost" id="ci_cancel" style="width:100%;margin-top:8px">Cancel</button>';
+    ["ci_prom","ci_loud","ci_dist","ci_stress"].forEach(wireScale);
+    $("ci_save").onclick=function(){ var x={id:spineId(),at:new Date().toISOString(),prominence:+$("ci_prom").value,loudness:+$("ci_loud").value,distress:+$("ci_dist").value,stress:+$("ci_stress").value,soundTolerance:$("ci_tol").value,environment:$("ci_env").value,externalSoundEffect:$("ci_sound").value,note:$("ci_note").value.trim()||null}; MS.checkins.push(x); spinePersist(); spineEvent("checkin","momentary","observed",x); buildSessionHub(false); };
+    $("ci_cancel").onclick=function(){ buildSessionHub(false); }; goto("checkin");
+  }
 
   /* ---------------- tabs ---------------- */
   var RESEARCH_VIEWS=["rtmenu","rt_spectrum","rt_rifunc","rt_ttc","rt_gap","rt_freq","rt_mod","rt_space","rt_dichotic","rt_sensitivity"];
@@ -1099,15 +1213,16 @@
   $("tabBtnAudio").addEventListener("click", function(){ showTab("audio"); });
   $("tabBtnDin").addEventListener("click", function(){ showTab("din"); });
   $("tabBtnResearch").addEventListener("click", function(){ showTab("research"); });
+  ["spineSafety","spineDevice","spineHistory"].forEach(function(id){ $(id).addEventListener("click",function(){ buildSessionHub(false); }); });
 
   /* ---------------- landing page ---------------- */
-  function enterApp(){ stopAll(); $("landing").classList.add("hidden"); $("app").classList.remove("hidden"); showTab("quick"); window.scrollTo({top:0,behavior:"smooth"}); }
+  function enterApp(){ stopAll(); $("landing").classList.add("hidden"); $("app").classList.remove("hidden"); showTab("quick"); spineEvent("session","lifecycle","started",{referrer:document.referrer||null}); updateSpineRibbon(); if(!MS.safety) buildSafetyForm(); window.scrollTo({top:0,behavior:"smooth"}); }
   function showLanding(){ stopAll(); $("app").classList.add("hidden"); $("landing").classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"}); }
   $("startStudy").addEventListener("click", enterApp);
   $("aboutLink").addEventListener("click", showLanding);
   /* ---------------- methods / science panel ---------------- */
   var _methodsPrev=[];
-  var METHODS_VIEWS=["landing","app","oct","therapy","tfi","freqmap","probe","react"].concat(RESEARCH_VIEWS);
+  var METHODS_VIEWS=["landing","app","oct","therapy","tfi","freqmap","probe","react","session_hub","checkin"].concat(RESEARCH_VIEWS);
   function showMethods(){
     stopAll();
     _methodsPrev=METHODS_VIEWS.filter(function(id){ var el=$(id); return el && !el.classList.contains("hidden"); });
@@ -1144,7 +1259,7 @@
     slider.addEventListener("input", refresh);
     btn.addEventListener("click", function(){
       if(v){ v.stop(); v=null; btn.textContent=playLabel; }
-      else { v=track(voice({freq:1000})); v.setGain(sliderGain(+slider.value),0.03); btn.textContent="■ Stop reference tone"; }
+      else { if(!requireSoundSafety()) return; v=track(voice({freq:1000})); v.setGain(sliderGain(+slider.value),0.03); btn.textContent="■ Stop reference tone"; spineEvent("audio","reference","applied",{control:btnId,gain:sliderGain(+slider.value)}); }
     });
     refresh();
     return { gain:function(){ return sliderGain(+slider.value); }, stop:function(){ if(v){v.stop(); v=null; btn.textContent=playLabel;} }, pct:function(){return +slider.value;} };
@@ -1153,13 +1268,15 @@
   var aCal=makeCal("a_vol","a_volReadout","a_calBtn","▶︎ Play reference tone (1 kHz)");
   var rCal=makeCal("r_vol","r_volReadout","r_calBtn","▶︎ Play reference tone (1 kHz)");
   function researchHome(){ $("app").classList.remove("hidden"); showTab("research"); goto("r_setup"); }
-  $("r_launch").addEventListener("click", function(){ rCal.stop(); A.ceil=Math.min(0.5,rCal.gain()); buildResearch(researchHome); });
+  $("r_launch").addEventListener("click", function(){ if(!requireSoundSafety()) return; rCal.stop(); A.ceil=Math.min(0.5,rCal.gain()); spineEvent("research","suite","requested",{ceiling:A.ceil}); buildResearch(researchHome); });
 
   /* Device check: verify stereo routing (L/R not reversed/leaking) + read the sample rate.
      No microphone, so true acoustic response can't be measured — this catches the common failures. */
   function devPlay(pan){ stopAll(); var v=track(voice({freq:660, pan:pan})); v.setGain(0.12,0.03); }
   function devCheck(){
+    if(!requireSoundSafety()) return;
     var c=AC(); A.hw=A.hw||{}; A.hw.sampleRate=c.sampleRate;
+    spineEvent("device_check","stereo","requested",{sampleRate:c.sampleRate});
     devPlay(-1);
     $("a_devresult").innerHTML='A tone is playing in <strong>one ear</strong>. Which side?'+
       '<div class="btn-row" style="margin-top:6px"><button class="btn-ghost" id="dv_l1">Left</button><button class="btn-ghost" id="dv_r1">Right</button></div>';
@@ -1175,6 +1292,7 @@
     stopAll();
     var ok = firstLeft && secondRight;   // first tone was Left, second was Right
     A.hw.channels = ok ? "ok" : "suspect";
+    spineEvent("device_check","stereo","observed",{channels:A.hw.channels,sampleRate:A.hw.sampleRate}); updateSpineRibbon();
     var sr=A.hw.sampleRate||0, srOk=sr>=32000;
     if(!srOk && $("a_ehf")){ $("a_ehf").checked=false; $("a_ehf").disabled=true; }
     $("a_devresult").innerHTML = (ok?'<span style="color:var(--good)">✓ Channels correct</span>':'<span style="color:var(--danger)">⚠ Channels reversed or leaking — check your headphones</span>')+
@@ -1274,9 +1392,7 @@
     setF(startHz); setMute(false); draw();
   }
 
-  /* Sound-therapy / masker player tuned to the measured tinnitus pitch. Sound-enrichment /
-     masker options incl. the "notched" approach (energy removed at the tinnitus pitch);
-     evidence for notched therapy specifically is mixed. */
+  /* Bounded sound-lab sessions. Digital settings are recorded; acoustic SPL is unknown. */
   function buildTherapy(pitch, backFn){
     var p = pitch || 6000;
     var SOUNDS=[
@@ -1285,21 +1401,34 @@
       {k:"pink", label:"Pink (soft) noise", desc:"gentle, natural-sounding background enrichment", make:function(){ return voice({noise:true, color:"pink", low:8000}); }},
       {k:"white", label:"White noise", desc:"full, even background sound (brighter)", make:function(){ return voice({noise:true, low:9000}); }}
     ];
-    var v=null, sel="nb", vol=0.12;
+    var v=null, sel="nb", vol=0.12, tick=null, began=0, planned=300, before=null;
+    function elapsed(){ return began?Math.max(0,Math.round((Date.now()-began)/1000)):0; }
+    function clock(s){ var m=Math.floor(s/60), r=s%60; return m+":"+(r<10?"0":"")+r; }
+    function finish(reason){
+      var used=elapsed(); soundLabCleanup=null; if(tick) clearInterval(tick); tick=null;
+      if(v){ v.setGain(0.0001,0.8); var old=v; setTimeout(function(){ try{old.stop();}catch(e){} },3000); v=null; }
+      spineEvent("sound_lab","session","applied",{sound:sel,plannedSeconds:planned,elapsedSeconds:used,stopReason:reason});
+      $("therapy").innerHTML='<p class="title-sm">After the sound</p><p class="small" style="margin-top:0">Capture the immediate observation. This does not establish treatment benefit or cause.</p><label for="th_effect">Tinnitus now</label><select id="th_effect"><option value="quieter">quieter</option><option value="same">unchanged</option><option value="louder">louder</option><option value="uncertain">uncertain</option></select><div style="margin-top:12px">'+scaleField("th_after_dist","Distress",before?before.distress:3)+'</div><label for="th_comfort" style="margin-top:12px">Sound comfort</label><select id="th_comfort"><option>comfortable</option><option>neutral</option><option>uncomfortable</option><option>painful</option></select><button class="btn-primary" id="th_save" style="margin-top:14px">Save observation</button><button class="btn-ghost" id="th_skip" style="width:100%;margin-top:8px">Skip &amp; return</button>';
+      wireScale("th_after_dist");
+      $("th_save").onclick=function(){ var rec={id:spineId(),at:new Date().toISOString(),pitchHz:p,sound:sel,purpose:before.purpose,plannedSeconds:planned,elapsedSeconds:used,digitalGain:vol,before:before,after:{effect:$("th_effect").value,distress:+$("th_after_dist").value,comfort:$("th_comfort").value},stopReason:reason,calibration:"digital relative level only; acoustic SPL unknown"}; MS.soundSessions.push(rec); spinePersist(); spineEvent("sound_lab","response","observed",rec); backFn(); };
+      $("th_skip").onclick=backFn;
+    }
     function render(){
       stopAll();
-      $("therapy").innerHTML='<p class="title-sm">Sound therapy</p>'+
-        '<p class="small" style="margin-top:0">Low-level background sound tuned to your tinnitus ('+fmt(p)+') can ease its prominence. Set it just <strong>below</strong> your tinnitus (mixing, not masking) and use it while relaxing or sleeping. This is comfort/enrichment, <strong>not a cure</strong> — evidence for specific "notched" therapy is mixed, and if you have hearing loss, hearing aids often help more.</p>'+
+      $("therapy").innerHTML='<p class="title-sm">Sound lab &amp; comfort session</p>'+
+        '<p class="small" style="margin-top:0">A bounded, low-level listening session with before/after observation. Keep it comfortable and below full masking. The app records the <strong>digital setting, not acoustic dB SPL</strong>. Stop immediately for discomfort.</p>'+
         SOUNDS.map(function(s){ return '<button class="choice'+(s.k===sel?' sel':'')+'" data-s="'+s.k+'"><span>'+s.label+'</span><small>'+s.desc+'</small></button>'; }).join("")+
-        '<label style="margin-top:14px">Level</label><input type="range" id="th_vol" min="0" max="100" value="'+Math.round(vol/0.6*100)+'">'+
-        '<button class="btn-primary" id="th_play" style="margin-top:6px">▶︎ Play</button>'+
+        '<div class="field-grid" style="margin-top:14px"><div><label for="th_purpose">Purpose</label><select id="th_purpose"><option value="comfort">comfort / enrichment</option><option value="partial_masking">partial masking</option><option value="residual_inhibition">observe residual inhibition</option><option value="focus">focus</option><option value="sleep">wind-down / sleep</option></select></div><div><label for="th_duration">Bounded duration</label><select id="th_duration"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="600">10 minutes</option><option value="1200">20 minutes</option><option value="1800">30 minutes</option></select></div></div><div class="field-grid" style="margin-top:12px"><div>'+scaleField("th_before_prom","Prominence",5)+'</div><div>'+scaleField("th_before_dist","Distress",3)+'</div></div>'+
+        '<label style="margin-top:14px">Digital level</label><input type="range" id="th_vol" min="0" max="100" value="'+Math.round(vol/0.6*100)+'"><div class="timer" id="th_timer">0:00</div><p class="small" id="th_phase" style="text-align:center;margin-top:0">Ready · gentle 3-second fade-in</p>'+
+        '<button class="btn-primary" id="th_play" style="margin-top:6px">Start bounded session</button>'+
         '<button class="btn-ghost" id="th_back" style="width:100%; margin-top:10px">← Back to results</button>';
       function curGain(){ return Math.max(0.0008, (+$("th_vol").value/100)*0.6); }
-      function play(){ stopAll(); v=track(SOUNDS.filter(function(s){return s.k===sel;})[0].make()); v.setGain(curGain(),0.05); $("th_play").textContent="■ Stop"; }
-      $("therapy").querySelectorAll(".choice").forEach(function(b){ b.addEventListener("click", function(){ sel=b.getAttribute("data-s"); $("therapy").querySelectorAll(".choice").forEach(function(x){x.classList.remove("sel");}); b.classList.add("sel"); if(v){ play(); } }); });
+      function play(){ if(!requireSoundSafety()) return; before={prominence:+$("th_before_prom").value,distress:+$("th_before_dist").value,purpose:$("th_purpose").value}; planned=+$("th_duration").value; vol=curGain(); stopAll(); v=track(SOUNDS.filter(function(s){return s.k===sel;})[0].make()); v.setGain(curGain(),0.8); began=Date.now(); soundLabCleanup=finish; $("th_play").textContent="Stop with gentle taper"; $("th_phase").textContent="Listening · stop if uncomfortable"; spineEvent("sound_lab","session","requested",{sound:sel,purpose:before.purpose,plannedSeconds:planned,digitalGain:vol}); tick=setInterval(function(){ var s=elapsed(); if($("th_timer")) $("th_timer").textContent=clock(s); if(s>=planned) finish("timer_complete"); },1000); }
+      $("therapy").querySelectorAll(".choice").forEach(function(b){ b.addEventListener("click", function(){ if(v) return; sel=b.getAttribute("data-s"); $("therapy").querySelectorAll(".choice").forEach(function(x){x.classList.remove("sel");}); b.classList.add("sel"); }); });
+      ["th_before_prom","th_before_dist"].forEach(wireScale);
       $("th_vol").addEventListener("input", function(){ vol=curGain(); if(v) v.setGain(curGain(),0.02); });
-      $("th_play").addEventListener("click", function(){ if(v){ stopAll(); v=null; $("th_play").textContent="▶︎ Play"; } else { play(); } });
-      $("th_back").addEventListener("click", function(){ stopAll(); backFn(); });
+      $("th_play").addEventListener("click", function(){ if(v){ finish("user_stop"); } else { play(); } });
+      $("th_back").addEventListener("click", function(){ if(v){ finish("back"); } else { stopAll(); backFn(); } });
     }
     goto("therapy"); render();
   }
@@ -1528,7 +1657,7 @@
      ================================================================ */
   var Q={ cutoff:null, heardAll:false, passes:[], tinHz:null, tinStatus:"not tested", char:{}, type:null };
   var qSweep=null;
-  $("q_accept").addEventListener("click", function(){ qCal.stop(); Q.gain=qCal.gain(); startQ("hearing"); });
+  $("q_accept").addEventListener("click", function(){ if(!requireSoundSafety()) return; qCal.stop(); Q.gain=qCal.gain(); spineEvent("quick","hearing_sweep","requested",{gain:Q.gain}); startQ("hearing"); });
   function startQ(kind){
     goto("q_run");
     if(kind==="hearing"){
@@ -1580,12 +1709,12 @@
       Q.type=classify({char:Q.char, pitch:Q.tinHz, audio:null});
       $("q_typeBox").innerHTML=impactRow(Q)+typeHtml(Q.type)
         +'<button class="btn-accent2" id="q_impact" style="width:100%; margin-top:12px">'+(Q.impact?"Re-do":"Add")+' tinnitus impact index</button>'
-        +'<button class="btn-accent2" id="q_therapy" style="width:100%; margin-top:8px">▶︎ Sound therapy tuned to '+fmt(Q.tinHz)+'</button>';
+        +'<button class="btn-accent2" id="q_therapy" style="width:100%; margin-top:8px">▶︎ Sound lab tuned to '+fmt(Q.tinHz)+'</button>';
       $("q_impact").addEventListener("click", function(){ buildImpact(Q, function(){ goto("q_result"); finishQ(); }); });
       $("q_therapy").addEventListener("click", function(){ buildTherapy(Q.tinHz, function(){ goto("q_result"); }); });
     }
     else $("q_typeBox").innerHTML="";
-    submitNetlify(qPayload());
+    spineEvent("quick","result","observed",{cutoffHz:Q.cutoff,tinnitusStatus:Q.tinStatus,tinnitusHz:Q.tinHz||null}); submitNetlify(qPayload());
   }
   $("q_email").addEventListener("click", function(){ emailOut(qEmailBody(), "Quick hearing/tinnitus result"); });
   $("q_again").addEventListener("click", resetQ);
@@ -1608,7 +1737,7 @@
   var curCatch=false, curCatchEar=null, catchTotal=0, lastWasCatch=false, CATCH_MAX=6, P_CATCH=0.12;
   function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
-  $("a_accept").addEventListener("click", function(){ aCal.stop(); A.ceil=Math.min(0.5, aCal.gain()); A.thr={right:{},left:{}}; A.thrSD={right:{},left:{}}; A.thrN={right:{},left:{}}; A.rel={right:{fa:0,pres:0}, left:{fa:0,pres:0}}; A.ctch={right:{n:0,fa:0}, left:{n:0,fa:0}}; var ag=parseInt(($("a_age").value||"").replace(/[^0-9]/g,""),10); A.age=(ag>=5&&ag<=120)?ag:null; A.hp=$("a_hp")?$("a_hp").value:null; FREQS = ($("a_ehf")&&$("a_ehf").checked) ? FREQS_STD.concat(FREQS_EHF) : FREQS_STD.slice(); buildTracks(); goto("a_thresh"); nextPresentation(); });
+  $("a_accept").addEventListener("click", function(){ if(!requireSoundSafety()) return; aCal.stop(); A.ceil=Math.min(0.5, aCal.gain()); A.thr={right:{},left:{}}; A.thrSD={right:{},left:{}}; A.thrN={right:{},left:{}}; A.rel={right:{fa:0,pres:0}, left:{fa:0,pres:0}}; A.ctch={right:{n:0,fa:0}, left:{n:0,fa:0}}; var ag=parseInt(($("a_age").value||"").replace(/[^0-9]/g,""),10); A.age=(ag>=5&&ag<=120)?ag:null; A.hp=$("a_hp")?$("a_hp").value:null; FREQS = ($("a_ehf")&&$("a_ehf").checked) ? FREQS_STD.concat(FREQS_EHF) : FREQS_STD.slice(); spineEvent("audiometry","thresholds","requested",{ceiling:A.ceil,frequencies:FREQS.slice()}); buildTracks(); goto("a_thresh"); nextPresentation(); });
   function gainForDb(db){ return A.ceil*Math.pow(10,(db-DYN)/20); }
 
   /* Warbled pulsed tone burst ("chirp"), as used in accredited pure-tone audiometry:
@@ -2108,7 +2237,7 @@
   }
   function rtBtn(id,title,sub){ return '<button class="btn-accent2" id="'+id+'" style="width:100%; margin-top:8px; text-align:left; white-space:normal; line-height:1.35">'+title+'<br><small style="font-weight:400; opacity:.85">'+sub+'</small></button>'; }
   function rtLocked(title,sub){ return '<div class="flag" style="margin-top:8px; border-color:var(--line); background:var(--panel-2); color:var(--muted)"><strong>'+title+'</strong><br><span class="small">'+sub+'</span></div>'; }
-  function soundPainLocked(){ return !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
+  function soundPainLocked(){ return soundBlocked() || !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
   function renderResearchHome(){
     var el=$("r_summary"); if(!el) return;
     var rows=[];
@@ -2175,6 +2304,9 @@
     $("rt_sens_done").onclick=function(){
       if(!ans.pain){ alert("Please answer the sound-pain question so the safety interlock can be set."); return; }
       ans.trigger=($("rt_trigger").value||"").trim()||null; ans.recordedAt=new Date().toISOString(); R.sensitivity=ans;
+      MS.safety=Object.assign({},MS.safety||{pulse:false,vertigo:false,ear:false},{soundPain:ans.pain,sudden:ans.sudden==="yes",recordedAt:ans.recordedAt});
+      MS.safety.mode=MS.safety.sudden?"urgent":((MS.safety.ear||ans.pain!=="no")?"self_report_only":(MS.safety.pulse?"reduced":"allowed"));
+      spinePersist(); spineEvent("safety","sound_sensitivity","observed",ans);
       var locked=soundPainLocked(), h='<p class="title-sm">Sound-sensitivity log saved</p>';
       if(locked) h+='<div class="flag" style="border-color:var(--danger); background:color-mix(in srgb,var(--danger) 12%,transparent)"><strong>Provocation-free mode.</strong> Because sound pain was reported or was uncertain, this panel will not offer the research sound stimuli. Do not raise sound to test tolerance or reproduce a trigger.</div>';
       else h+='<div class="flag" style="border-color:var(--good); background:color-mix(in srgb,var(--good) 10%,transparent)"><strong>No sound pain reported.</strong> Optional research tests remain available at the comfortable ceiling you set.</div>';
@@ -2520,7 +2652,10 @@
     return '<div class="divider"></div><p class="title-sm">Tinnitus ↔ threshold relationship</p><table class="tt" style="margin-top:2px">'+rows.map(function(r){return '<tr><td style="text-align:left;color:var(--muted)">'+r[0]+'</td><td style="text-align:right">'+r[1]+'</td></tr>';}).join("")+'</table><p class="small" style="margin-top:6px"><strong>Sensation level (SL)</strong> = how far the matched tone sat <em>above your own threshold</em> at that pitch — a more meaningful "how loud is it really" than a raw level. All values relative, not dB&nbsp;HL.</p>';
   }
   function exportSession(){
-    var data={ meta:{ app:"entertrainment hearing panel", generatedAt:new Date().toISOString(), note:"Uncalibrated, self-referenced. Levels are relative (dB above your own best), NOT dB HL." },
+    spineEvent("session","export","requested",{events:MS.events.length,checkins:MS.checkins.length,soundSessions:MS.soundSessions.length});
+    var data={ schemaVersion:MS.schemaVersion, protocolVersion:MS.protocolVersion, sessionId:MS.sessionId,
+      meta:{ app:"entertrainment hearing panel", startedAt:MS.startedAt, generatedAt:new Date().toISOString(), note:"Uncalibrated, self-referenced. Digital level settings are not acoustic dB SPL; hearing levels are NOT dB HL." },
+      measurementSpine:{ safety:MS.safety,capabilities:capabilitySnapshot(),events:MS.events.slice(),checkins:MS.checkins.slice(),soundSessions:MS.soundSessions.slice() },
       hardware:{ sampleRate:(A.hw&&A.hw.sampleRate)||null, channelCheck:(A.hw&&A.hw.channels)||"unchecked", extendedHighFreq: FREQS.some(function(f){return f>8000;}), headphones:A.hp||null, userAgent:navigator.userAgent },
       subject:{ label:($("a_tester").value||"").trim()||null, age:A.age||null },
       audiometry:{ frequencies:FREQS.slice(), refOffset:aRefOffset(),
@@ -2531,7 +2666,7 @@
       retest:(A.isRetest&&A.baseline)?{ baseline:A.baseline.thr }:null,
       tinnitus:{ status:A.tinStatus, pitchHz:A.tinHz||null, passes:A.passes||[], character:A.char||{}, loudnessRel:A.loudDb, mmlRel:A.mmlDb, mrilRel:A.mrilDb, residualInhibition:A.ri, frequencyResponseMap:A.freqMap||null, spectrumLikeness:A.spectrum||null, residualInhibitionFunction:A.riFunc||null, tuningCurve:A.ttc||null, maskerSettings:A.masker||null, stimulusReactivity:A.reactivity||null, impact:A.impact||null, phenotype:A.type?A.type.phenotype:null },
       research:{ soundSensitivity:R.sensitivity, frequencyDiscrimination:R.frequency, gapDetection:R.gap, temporalModulation:R.modulation, binauralLateralisation:R.spatial, dichoticAttention:R.dichotic } };
-    try{ var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="hearing-session.json"; a.click(); setTimeout(function(){ URL.revokeObjectURL(url); },1000); }
+    try{ var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download="hearing-session-"+MS.sessionId+".json"; a.click(); setTimeout(function(){ URL.revokeObjectURL(url); },1000); }
     catch(e){ alert("Export failed: "+e); }
   }
   function showAResult(){
@@ -2555,7 +2690,7 @@
       h+='<button class="btn-accent2" id="a_react" style="width:100%; margin-top:8px">🧪 Spectral stimulus reactivity</button>'; }
     if(A.tinStatus==="matched"){
       h+='<button class="btn-accent2" id="a_impact" style="width:100%; margin-top:14px">'+(A.impact?"Re-do":"Add")+' tinnitus impact index</button>';
-      h+='<button class="btn-accent2" id="a_therapy" style="width:100%; margin-top:8px">▶︎ Sound therapy tuned to '+fmt(A.tinHz)+'</button>';
+      h+='<button class="btn-accent2" id="a_therapy" style="width:100%; margin-top:8px">▶︎ Sound lab tuned to '+fmt(A.tinHz)+'</button>';
     }
     h+='<button class="btn-ghost" id="a_export" style="width:100%; margin-top:8px">⬇ Export raw session (JSON)</button>';
     $("a_resultBody").innerHTML=h;
@@ -2569,7 +2704,7 @@
       $("a_react").addEventListener("click", function(){ buildReactivity(showAResult); });
     }
     goto("a_result");
-    submitNetlify(aPayload());
+    spineEvent("audiometry","result","observed",{frequencies:FREQS.slice(),tinnitusStatus:A.tinStatus,tinnitusHz:A.tinHz||null,responseQuality:{right:rr.t,left:rl.t}}); submitNetlify(aPayload());
   }
   $("a_retest").addEventListener("click", function(){
     A.baseline={ thr: JSON.parse(JSON.stringify(A.thr)) }; A.isRetest=true;
@@ -2639,10 +2774,10 @@
     $("d_resultBody").innerHTML='<div class="resrow"><span class="k">Speech-in-noise threshold <small style="font-size:.55em; color:var(--muted)">(SRT-equivalent, relative)</small></span><span class="v">'+D.srt+' dB SNR<small style="font-size:.6em;color:var(--muted)"> rel</small></span></div>'+
       '<div class="resrow"><span class="k">Interpretation</span><span class="v" style="font-size:1rem"><span class="badge '+D.band.c+'">'+D.band.t+'</span></span></div>'+
       '<p class="small" style="margin-top:10px">A <strong>lower</strong> number means you can still follow speech in louder noise (better). Measured with a 1-up/1-down adaptive track (SRT = mean of the reversal SNRs). It is a <strong>relative</strong> dB SNR — the noise scales correctly by 10^(−SNR/20), but absolute calibration isn\'t possible with a device speech voice. If you struggle to follow conversation in real-world noise, see an audiologist — speech-in-noise difficulty can occur even with a near-normal audiogram.</p>';
-    goto("d_result"); submitNetlify(dPayload());
+    spineEvent("speech_in_noise","result","observed",{srtRelativeDb:D.srt,interpretation:D.band.t,reversals:D.revs.slice(),trials:D.track.length}); goto("d_result"); submitNetlify(dPayload());
   }
   function dPayload(){ return { panel:"speech-in-noise", tester:"", cutoff_hz:"", tinnitus_hz:"", tinnitus_type:(D.band?D.band.t:""), audiogram:"SRT "+D.srt+" dB SNR (relative, TTS)", tinnitus_profile:"", device:navigator.userAgent, timestamp:new Date().toString() }; }
-  $("d_start").addEventListener("click", function(){ D={snr:6,step:4,bigStep:4,smallStep:2,lastDir:0,revs:[],track:[],trial:0,max:24,digits:"",entry:"",noise:null,replays:0,srt:null,band:null}; dPad(); goto("d_run"); dNewTrial(); });
+  $("d_start").addEventListener("click", function(){ if(!requireSoundSafety()) return; D={snr:6,step:4,bigStep:4,smallStep:2,lastDir:0,revs:[],track:[],trial:0,max:24,digits:"",entry:"",noise:null,replays:0,srt:null,band:null}; spineEvent("speech_in_noise","adaptive_track","requested",{}); dPad(); goto("d_run"); dNewTrial(); });
   $("d_submit").addEventListener("click", dSubmit);
   $("d_back").addEventListener("click", function(){ D.entry=D.entry.slice(0,-1); dShow(); });
   $("d_replay").addEventListener("click", function(){ if(D.replays<1){ D.replays++; dSpeak(); } });
@@ -2652,6 +2787,7 @@
 
   // init skip handler for quick tab
   $("q_skipTin").onclick=function(){ Q.tinStatus="not tested"; Q.tinHz=null; goto("q_result"); finishQ(); };
+  updateSpineRibbon();
 })();
 </script>
 </body>

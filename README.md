@@ -9,7 +9,7 @@ A single-file, offline-capable web app with **four visible tabs**:
 1. **Hearing range** — medium-speed 250 Hz → 20 kHz sweep; tap *"I can't hear it anymore"* to record your high-frequency cutoff.
 2. **Tinnitus pitch match** — a *slow* sweep starting at **500 Hz** (documented tinnitus low bound). After each match you land on a **fine-tune & confirm** screen: a **live oscilloscope** + **real-time spectrum with a pitch marker**, a continuous pitch scrubber (with **÷2 / ×2** octave jumps to defeat octave confusion), and an **A/B compare** that alternates the tone with silence so you can check it against your tinnitus. Runs **up to 3 times**, **geometrically averaged**.
 3. **Tinnitus character** — a short questionnaire (closest sound, laterality, pulsatile, somatic) → a **suggested tinnitus type**.
-4. **Sound therapy** — from the result, a player tuned to your matched pitch: **narrowband** masker, **notched noise** (energy removed at your pitch), **pink-ish**, or **white** noise, with a level slider.
+4. **Sound lab & comfort sessions** — from the result, a bounded player tuned to your matched pitch: **narrowband** masker, **notched noise** (energy removed at your pitch), **pink-ish**, or **white** noise. Sessions use a gentle fade, a fixed 1–30 minute duration, and before/after observations. The saved level is a digital setting, never claimed as acoustic dB SPL or treatment.
 
 ### 2 · Audiology panel
 0. **Set a comfort ceiling** — the loudest comfortable level; the test never exceeds it.
@@ -24,7 +24,7 @@ A single-file, offline-capable web app with **four visible tabs**:
    - **Self-referenced** — levels are re-referenced to your own *best* threshold (so 0 = your best), which is less arbitrary than the comfort-ceiling anchor. Axis reads "dB rel. to your best".
    - **Age overlay** — enter an optional age and a dashed **typical age-related shape** (ISO-7029-style presbycusis trend) is drawn for context, anchored to your low-frequency point. Clearly labelled as shape-only, not a calibrated comparison.
    - **Reliability readout** — per-ear **Good / Fair / Questionable** based on false presses and how many presentations each frequency needed; flags an unreliable run.
-3. **Advanced tinnitus battery** — pitch match (averaged, each pass confirmed on the **live-scope fine-tuner** with ÷2/×2 octave jumps) → **sound-quality audition** (tone / ring / hiss / buzz / roar / crickets) → **loudness match** (also shown in **dB SL**, above your threshold) → **minimum masking level** → **MRIL** (minimum residual-inhibition level: an *adaptive* search using **triangular-envelope narrowband bursts** [10] — plays ~20 s, asks if your tinnitus is briefly reduced, then probes quieter/louder to find the lowest level that produces residual inhibition) → questionnaire → a **suggested tinnitus type** that references your audiogram shape → optional **tinnitus impact index** (0–100, original wording modelled on validated distress questionnaires) → **sound therapy** (evidence tempered per recent trials).
+3. **Advanced tinnitus battery** — pitch match (averaged, each pass confirmed on the **live-scope fine-tuner** with ÷2/×2 octave jumps) → **sound-quality audition** (tone / ring / hiss / buzz / roar / crickets) → **loudness match** (also shown in **dB SL**, above your threshold) → **minimum masking level** → **MRIL** (minimum residual-inhibition level: an *adaptive* search using **triangular-envelope narrowband bursts** [10] — plays ~20 s, asks if your tinnitus is briefly reduced, then probes quieter/louder to find the lowest level that produces residual inhibition) → questionnaire → a **suggested tinnitus type** that references your audiogram shape → optional **tinnitus impact index** (0–100, original wording modelled on validated distress questionnaires) → a bounded **Sound lab** observation session (evidence tempered per recent trials).
 
 ### 3 · Speech-in-noise
 A **calibration-free** speech-in-noise screen: three spoken digits over noise, with an adaptive **1-up/1-down** SNR track → a speech-reception threshold. Uses the browser's built-in speech voice + Web Audio noise, so it's honest about being a **relative, TTS-based** screen rather than the validated clinical Digits-in-Noise corpus. Captures functional hearing (understanding speech in noise) that pure-tone testing can miss.
@@ -50,6 +50,17 @@ A directly visible exploratory suite—no need to finish the audiology panel bef
 All research-test results are stored in the raw-session JSON export. They are uncalibrated, within-session measures—not clinical cut-offs or diagnoses.
 
 Results (and, for the audiology panel, the full threshold table + tinnitus profile) are shown on screen and emailed to **you@example.com**.
+
+### Measurement spine & longitudinal check-ins
+
+The three-part ribbon above the test tabs exposes a shared record used by every module:
+
+- **Protocol-wide safety state** — sudden hearing change or severe neurological/vestibular symptoms switch the app to “seek care first”; ear pain or uncertain/painful sound tolerance switches it to self-report-only mode. Sound-producing entry points remain locked until the safety check is completed.
+- **Capability and quality context** — AudioContext state, browser sample rate, latency where exposed, stereo-routing result, headphones and browser are exported alongside the measurements. These are device facts, not an acoustic calibration.
+- **Momentary check-ins** — tinnitus prominence, perceived loudness, distress, stress, sound tolerance, context and the immediate relationship to external sound are stored locally. A small trend shows recent prominence without collapsing the other dimensions into one score.
+- **Auditable event stream** — requested, applied and observed events use a session ID, increasing sequence, wall-clock time and monotonic elapsed time. The JSON export includes the event stream, check-ins, safety record and Sound Lab observations under schema version 2.
+
+Local history stays in that browser until the user exports it. No microphone is used and the page does not claim room acoustics, autonomic sensing or acoustic SPL.
 
 ---
 
