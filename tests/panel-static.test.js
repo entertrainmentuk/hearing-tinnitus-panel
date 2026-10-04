@@ -26,14 +26,15 @@ test("static markup does not contain duplicate ids", () => {
 
 test("measurement spine schema and local history are present", () => {
   for (const marker of [
-    'schemaVersion:3',
-    'protocolVersion:"2026.10.1"',
+    'schemaVersion:4',
+    'protocolVersion:"2026.10.2"',
     'spineEvent("sound_lab","session","requested"',
     'spineEvent("sound_lab","session","applied"',
     'spineEvent("sound_lab","response","observed"',
     'measurementSpine:{ safety:MS.safety',
     'checkins:MS.checkins.slice()',
     'soundSessions:MS.soundSessions.slice()',
+    'soundExperiments:MS.soundExperiments.slice()',
   ]) {
     assert.ok(app.includes(marker), `missing ${marker}`);
   }
@@ -58,7 +59,23 @@ test("local history has explicit export, import and deletion controls", () => {
   }
   assert.match(app, /function importHistoryFile\(file\)/);
   assert.match(app, /function clearSavedHistory\(\)/);
+  assert.match(app, /mergeRecords\(MS\.soundExperiments,se\)/);
   assert.match(app, /if\(\/\^\[=\+\\-@\]\//, "CSV export must neutralize spreadsheet formulas");
+});
+
+test("personal A/B plans are prospective, balanced and honest about inference", () => {
+  assert.match(app, /window\.crypto\.getRandomValues/);
+  assert.match(app, /function balancedSequence\(rng\)/);
+  assert.match(app, /seq\.push\(flip\?"B":"A",flip\?"A":"B"\)/);
+  assert.match(app, /primaryOutcome:\$\("ex_outcome"\)\.value/);
+  assert.match(app, /Comparison stays hidden until all six periods finish/);
+  assert.match(app, /completedAsPlanned:reason==="timer_complete"/);
+  assert.match(app, /This small, unblinded self-comparison cannot establish efficacy or cause/);
+  assert.match(app, /k:"quiet",label:"Quiet rest"/);
+  assert.match(app, /id="sh_experiment"/);
+  assert.match(app, /function latestSoundExperiment\(\)/);
+  assert.match(app, /buildTherapy\(experimentPlan\.pitchHz/);
+  assert.match(app, /resumeExperiment===true\?activeSoundExperiment\(\):resumeExperiment/);
 });
 
 test("all Web Audio signals use the monitored master output", () => {
@@ -79,12 +96,14 @@ test("all top-level sound-producing entry points use the shared gate", () => {
     assert.match(app, binding, `${id} must be safety-gated`);
   }
   assert.match(app, /function devCheck\(\)\{\s+if\(!requireSoundSafety\(\)\) return;/);
-  assert.match(app, /function play\(\)\{ if\(!requireSoundSafety\(\)\) return; before=/);
+  assert.match(app, /function play\(\)\{if\(!requireSoundSafety\(\)\)return;/);
 });
 
 test("public documentation describes the bounded, uncalibrated Sound Lab", () => {
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
   assert.match(readme, /Sound lab & comfort sessions/);
   assert.match(readme, /digital setting, never claimed as acoustic dB SPL/);
+  assert.match(readme, /Prospective personal A\/B comparison/);
+  assert.match(readme, /three computer-randomised balanced pairs/);
   assert.match(readme, /Measurement spine & longitudinal check-ins/);
 });

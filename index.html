@@ -123,6 +123,15 @@
   .data-note{border:1px solid var(--line);background:var(--panel-2);border-radius:11px;padding:11px 12px;margin:12px 0;font-size:.79rem;color:var(--muted);line-height:1.5}
   .btn-danger{background:color-mix(in srgb,var(--danger) 12%,var(--panel));color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 38%,var(--line))}
   .timer{font-variant-numeric:tabular-nums;font-size:2.1rem;font-weight:800;text-align:center;letter-spacing:.03em;margin:12px 0 4px}
+  .experiment-card{border:1px solid color-mix(in srgb,var(--accent-2) 42%,var(--line));background:color-mix(in srgb,var(--accent-2) 5%,var(--panel));border-radius:13px;padding:14px;margin:14px 0}
+  .experiment-card h3{font-size:.95rem;margin:0 0 4px}.experiment-card p{margin:4px 0}
+  .session-tape{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin:13px 0 9px}
+  .session-slot{min-width:0;border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:8px 3px;text-align:center;font-variant-numeric:tabular-nums}
+  .session-slot span{display:block;color:var(--muted);font-size:.61rem;text-transform:uppercase;letter-spacing:.04em}
+  .session-slot strong{display:block;font-size:.8rem;margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+  .session-slot.done{background:color-mix(in srgb,var(--accent) 10%,var(--panel));border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.session-slot.done strong{color:var(--accent)}
+  .session-slot.next{background:color-mix(in srgb,var(--accent-2) 10%,var(--panel));border-color:var(--accent-2);box-shadow:inset 0 0 0 1px var(--accent-2)}.session-slot.next strong{color:var(--accent-2)}
+  .comparison{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.comparison>div{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:11px}.comparison span{display:block;color:var(--muted);font-size:.68rem}.comparison strong{display:block;font-size:1.12rem;margin-top:3px}
   @media(max-width:500px){.session-ribbon{grid-template-columns:1fr 1fr}.field-grid{grid-template-columns:1fr}}
 
   /* ===== Methods / science panel — fully scoped under #methods ===== */
@@ -356,7 +365,7 @@
   <div class="session-ribbon" aria-label="Session trace">
     <button class="trace-pill" id="spineSafety" data-state="warn"><span>Safety</span><strong>Check needed</strong></button>
     <button class="trace-pill" id="spineDevice"><span>Device</span><strong>Not checked</strong></button>
-    <button class="trace-pill" id="spineHistory"><span>Check-ins</span><strong>0 saved</strong></button>
+    <button class="trace-pill" id="spineHistory"><span>History</span><strong>0 saved</strong></button>
     <button class="trace-pill emergency" id="spineStop"><span>Emergency</span><strong>Stop all sound</strong></button>
   </div>
 
@@ -865,6 +874,16 @@
     </div>
 
     <div class="test">
+      <h3>Prospective personal A/B comparison <span class="chip exp">experiment</span></h3>
+      <dl class="fields">
+        <dt>Measures</dt><dd>The immediate after-minus-before change in one outcome chosen in advance: tinnitus prominence, perceived loudness, or distress.</dd>
+        <dt>Method</dt><dd>Two Sound Lab conditions are compared over <strong>three balanced pairs</strong> (six periods). A computer-generated bit assigns AB or BA within each pair. Duration and digital gain remain fixed; later allocations and interim results stay concealed. A minimum gap and a user-confirmed settled state guard against immediate carryover.</dd>
+        <dt>Reporting</dt><dd>Condition means, usable observations, missing outcomes and early stops are shown descriptively after all six periods. The generated sequence and actual completion state remain in the raw export, following the transparency principles of <a href="https://www.bmj.com/content/350/bmj.h1793">CENT 2015</a>.</dd>
+        <dt class="limit">Limits</dt><dd class="limit">The sounds are recognisable, so this is not blinded. Six observations cannot separate expectation, time trends, autocorrelation or longer carryover from a real condition effect. A recent tinnitus crossover trial found carryover despite a planned washout, illustrating this risk (<a href="https://pubmed.ncbi.nlm.nih.gov/41699251/">Quemar et al., 2026</a>).</dd>
+      </dl>
+    </div>
+
+    <div class="test">
       <h3>Spectral stimulus reactivity <span class="chip exp">experiment</span></h3>
       <dl class="fields">
         <dt>Measures</dt><dd>Whether spectral <em>structure</em> — not loudness — changes the tinnitus.</dd>
@@ -1072,16 +1091,16 @@
 
   /* ---------------- measurement spine ----------------
      requested -> applied -> observed records, stored locally and included in export. */
-  var SPINE_KEY="entertrainment.hearing.spine.v3", LEGACY_SPINE_KEY="entertrainment.hearing.spine.v2";
+  var SPINE_KEY="entertrainment.hearing.spine.v4", LEGACY_SPINE_KEYS=["entertrainment.hearing.spine.v3","entertrainment.hearing.spine.v2"];
   function spineId(){ return "htp-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9); }
   function spineLoad(){
-    var saved={}; try{ saved=JSON.parse(localStorage.getItem(SPINE_KEY)||localStorage.getItem(LEGACY_SPINE_KEY)||"{}"); }catch(e){}
-    return {schemaVersion:3,protocolVersion:"2026.10.1",sessionId:spineId(),startedAt:new Date().toISOString(),sequence:0,events:[],
-      safety:null,lastSafety:saved.lastSafety||saved.safety||null,checkins:Array.isArray(saved.checkins)?saved.checkins:[],soundSessions:Array.isArray(saved.soundSessions)?saved.soundSessions:[],storageError:null};
+    var raw=null,saved={}; try{ raw=localStorage.getItem(SPINE_KEY); for(var i=0;!raw&&i<LEGACY_SPINE_KEYS.length;i++) raw=localStorage.getItem(LEGACY_SPINE_KEYS[i]); saved=JSON.parse(raw||"{}"); }catch(e){}
+    return {schemaVersion:4,protocolVersion:"2026.10.2",sessionId:spineId(),startedAt:new Date().toISOString(),sequence:0,events:[],
+      safety:null,lastSafety:saved.lastSafety||saved.safety||null,checkins:Array.isArray(saved.checkins)?saved.checkins:[],soundSessions:Array.isArray(saved.soundSessions)?saved.soundSessions:[],soundExperiments:Array.isArray(saved.soundExperiments)?saved.soundExperiments:[],storageError:null};
   }
   var MS=spineLoad();
   function spinePersist(){
-    try{ localStorage.setItem(SPINE_KEY,JSON.stringify({schemaVersion:MS.schemaVersion,lastSafety:MS.safety||MS.lastSafety,checkins:MS.checkins,soundSessions:MS.soundSessions})); MS.storageError=null; }
+    try{ localStorage.setItem(SPINE_KEY,JSON.stringify({schemaVersion:MS.schemaVersion,lastSafety:MS.safety||MS.lastSafety,checkins:MS.checkins,soundSessions:MS.soundSessions,soundExperiments:MS.soundExperiments})); MS.storageError=null; }
     catch(e){ MS.storageError="Local storage is full or unavailable. Export your record before adding more observations."; }
   }
   function spineEvent(test,phase,event,details){
@@ -1107,8 +1126,9 @@
     var cp=capabilitySnapshot(), device=cp.digitalOutput.samples?(cp.digitalOutput.maxPeakDbfs+" dBFS peak"):(cp.channelCheck!=="unchecked"?cp.channelCheck:(cp.sampleRate?Math.round(cp.sampleRate/1000)+" kHz audio":"Not checked"));
     $("spineDevice").querySelector("strong").textContent=device;
     $("spineDevice").dataset.state=cp.channelCheck!=="unchecked"?"ok":"";
-    $("spineHistory").querySelector("strong").textContent=MS.checkins.length+" saved";
-    $("spineHistory").dataset.state=MS.checkins.length?"ok":"";
+    var savedCount=MS.checkins.length+MS.soundSessions.length+MS.soundExperiments.length;
+    $("spineHistory").querySelector("strong").textContent=savedCount+" saved";
+    $("spineHistory").dataset.state=savedCount?"ok":"";
   }
 
   /* ---------------- shared audio ---------------- */
@@ -1216,26 +1236,28 @@
   function downloadBlob(name,type,textValue){ try{ var blob=new Blob([textValue],{type:type}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=name; a.click(); setTimeout(function(){URL.revokeObjectURL(url);},1000); }catch(e){ alert("Download failed: "+e); } }
   function csvCell(v){ if(v==null) return ""; var s=typeof v==="object"?JSON.stringify(v):String(v); if(/^[=+\-@]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; }
   function exportHistoryCSV(){
-    var cols=["record_type","timestamp","prominence","loudness","distress","stress","sound_tolerance","environment","external_sound_effect","note","sound","purpose","planned_seconds","elapsed_seconds","digital_gain","after_effect","after_distress","comfort"];
+    var cols=["record_type","timestamp","prominence","loudness","distress","stress","sound_tolerance","environment","external_sound_effect","note","sound","purpose","planned_seconds","elapsed_seconds","digital_gain","after_effect","after_prominence","after_loudness","after_distress","comfort","experiment_id","experiment_session","experiment_condition","completed_as_planned"];
     var rows=MS.checkins.map(function(x){return ["checkin",x.at,x.prominence,x.loudness,x.distress,x.stress,x.soundTolerance,x.environment,x.externalSoundEffect,x.note];});
-    MS.soundSessions.forEach(function(x){rows.push(["sound_session",x.at,x.before&&x.before.prominence,x.before&&x.before.loudness,x.before&&x.before.distress,"","","","","",x.sound,x.purpose,x.plannedSeconds,x.elapsedSeconds,x.digitalGain,x.after&&x.after.effect,x.after&&x.after.distress,x.after&&x.after.comfort]);});
+    MS.soundSessions.forEach(function(x){rows.push(["sound_session",x.at,x.before&&x.before.prominence,x.before&&x.before.loudness,x.before&&x.before.distress,"","","","","",x.sound,x.purpose,x.plannedSeconds,x.elapsedSeconds,x.digitalGain,x.after&&x.after.effect,x.after&&x.after.prominence,x.after&&x.after.loudness,x.after&&x.after.distress,x.after&&x.after.comfort,x.experiment&&x.experiment.planId,x.experiment&&x.experiment.sessionIndex!=null?x.experiment.sessionIndex+1:"",x.experiment&&x.experiment.condition,x.experiment&&x.experiment.completedAsPlanned]);});
     downloadBlob("hearing-history.csv","text/csv;charset=utf-8",cols.map(csvCell).join(",")+"\n"+rows.map(function(r){return cols.map(function(_,i){return csvCell(r[i]);}).join(",");}).join("\n")); spineEvent("history","export","requested",{format:"csv",records:rows.length});
   }
-  function mergeRecords(existing,incoming){ var seen={}; existing.forEach(function(x){seen[x.id||x.at+JSON.stringify(x)]=true;}); incoming.forEach(function(x){var k=x.id||x.at+JSON.stringify(x);if(!seen[k]){existing.push(x);seen[k]=true;}}); existing.sort(function(a,b){return String(a.at).localeCompare(String(b.at));}); }
+  function mergeRecords(existing,incoming){ var seen={}; existing.forEach(function(x){seen[x.id||(x.at||x.createdAt)+JSON.stringify(x)]=true;}); incoming.forEach(function(x){var k=x.id||(x.at||x.createdAt)+JSON.stringify(x);if(!seen[k]){existing.push(x);seen[k]=true;}}); existing.sort(function(a,b){return String(a.at||a.createdAt).localeCompare(String(b.at||b.createdAt));}); }
   function importHistoryFile(file){
-    if(!file) return; file.text().then(function(raw){ var data=JSON.parse(raw), spine=data.measurementSpine||data; var ci=Array.isArray(spine.checkins)?spine.checkins:[], ss=Array.isArray(spine.soundSessions)?spine.soundSessions:[]; if(!ci.length&&!ss.length) throw new Error("No check-ins or Sound Lab sessions were found."); mergeRecords(MS.checkins,ci); mergeRecords(MS.soundSessions,ss); spinePersist(); spineEvent("history","import","observed",{checkins:ci.length,soundSessions:ss.length}); buildSessionHub(false,"Imported "+ci.length+" check-ins and "+ss.length+" Sound Lab sessions."); }).catch(function(e){ buildSessionHub(false,"Import failed: "+e.message,true); });
+    if(!file) return; file.text().then(function(raw){ var data=JSON.parse(raw), spine=data.measurementSpine||data; var ci=Array.isArray(spine.checkins)?spine.checkins:[],ss=Array.isArray(spine.soundSessions)?spine.soundSessions:[],se=Array.isArray(spine.soundExperiments)?spine.soundExperiments:[]; if(!ci.length&&!ss.length&&!se.length) throw new Error("No check-ins, Sound Lab sessions or personal experiments were found."); mergeRecords(MS.checkins,ci); mergeRecords(MS.soundSessions,ss); mergeRecords(MS.soundExperiments,se); spinePersist(); spineEvent("history","import","observed",{checkins:ci.length,soundSessions:ss.length,soundExperiments:se.length}); buildSessionHub(false,"Imported "+ci.length+" check-ins, "+ss.length+" Sound Lab sessions and "+se.length+" experiment plans."); }).catch(function(e){ buildSessionHub(false,"Import failed: "+e.message,true); });
   }
-  function clearSavedHistory(){ if(!confirm("Delete every saved check-in and Sound Lab session from this browser? Export first if you may need them. This cannot be undone.")) return; MS.checkins=[]; MS.soundSessions=[]; MS.lastSafety=null; try{localStorage.removeItem(SPINE_KEY);localStorage.removeItem(LEGACY_SPINE_KEY);}catch(e){} spineEvent("history","delete_all","observed",{}); buildSessionHub(false,"Saved local history deleted."); }
+  function clearSavedHistory(){ if(!confirm("Delete every saved check-in, Sound Lab session and personal experiment from this browser? Export first if you may need them. This cannot be undone.")) return; MS.checkins=[]; MS.soundSessions=[]; MS.soundExperiments=[]; MS.lastSafety=null; try{localStorage.removeItem(SPINE_KEY);LEGACY_SPINE_KEYS.forEach(function(k){localStorage.removeItem(k);});}catch(e){} spineEvent("history","delete_all","observed",{}); buildSessionHub(false,"Saved local history deleted."); }
   function buildSessionHub(forceSafety,message,isError){
     if(forceSafety&&!MS.safety){ buildSafetyForm(); return; }
-    var cp=capabilitySnapshot(), mode=safetyMode();
+    var cp=capabilitySnapshot(),mode=safetyMode(),experimentPlan=latestSoundExperiment();
     var ds=cp.digitalOutput;
     $("session_hub").innerHTML='<p class="title-sm">Session trace</p><p class="small" style="margin-top:0">One inspectable record joins safety, device context, test events, repeated check-ins and Sound Lab observations. Nothing is sent automatically.</p>'+
       '<div class="flag" style="'+(mode==="urgent"||mode==="self_report_only"?'':'border-color:var(--line);background:var(--panel-2);color:var(--muted)')+'"><strong>Safety · '+mode.replaceAll("_"," ")+'</strong><br>'+safetySummary()+'</div>'+
       '<div class="spine-grid"><div class="spine-stat"><span>Session ID</span><strong>'+MS.sessionId.slice(-10)+'</strong></div><div class="spine-stat"><span>Events</span><strong>'+MS.events.length+'</strong></div><div class="spine-stat"><span>Audio context</span><strong>'+cp.state+'</strong></div><div class="spine-stat"><span>Sample rate</span><strong>'+(cp.sampleRate?cp.sampleRate+' Hz':'Not started')+'</strong></div><div class="spine-stat"><span>Stereo route</span><strong>'+cp.channelCheck+'</strong></div><div class="spine-stat"><span>Digital output</span><strong>'+(ds.samples?(ds.maxPeakDbfs+' dBFS peak'):'Not observed')+'</strong></div></div>'+trendBars()+recentHistory()+
-      '<div class="data-note"><strong>Private by default.</strong> '+MS.checkins.length+' check-ins and '+MS.soundSessions.length+' Sound Lab sessions are saved only in this browser. Digital output values are dBFS measurements inside Web Audio—not acoustic dB SPL. Speech generated by the operating system sits outside this monitor.'+(MS.storageError?'<br><strong style="color:var(--danger)">'+esc(MS.storageError)+'</strong>':'')+'</div>'+
+      '<div class="data-note"><strong>Private by default.</strong> '+MS.checkins.length+' check-ins, '+MS.soundSessions.length+' Sound Lab sessions and '+MS.soundExperiments.length+' personal experiment plans are saved only in this browser. Digital output values are dBFS measurements inside Web Audio—not acoustic dB SPL. Speech generated by the operating system sits outside this monitor.'+(MS.storageError?'<br><strong style="color:var(--danger)">'+esc(MS.storageError)+'</strong>':'')+'</div>'+
       (message?'<div class="status" style="color:'+(isError?'var(--danger)':'var(--good)')+'">'+esc(message)+'</div>':'')+
+      (experimentPlan?'<button class="btn-accent2" id="sh_experiment">'+(experimentPlan.status==="active"?'Continue':'View')+' personal A/B · '+(experimentPlan.nextIndex||0)+' of 6 · '+esc(experimentPlan.status.replaceAll("_"," "))+'</button>':'')+
       '<button class="btn-primary" id="sh_checkin">Record a check-in</button><div class="btn-row"><button class="btn-ghost" id="sh_safety">'+(MS.safety?'Update':'Complete')+' safety check</button><button class="btn-ghost" id="sh_export">Export JSON</button></div><div class="btn-row"><button class="btn-ghost" id="sh_csv">Export CSV</button><button class="btn-ghost" id="sh_import">Import JSON</button></div><input class="hidden" type="file" id="sh_import_file" accept="application/json,.json"><button class="btn-danger" id="sh_clear" style="width:100%;margin-top:8px">Delete saved local history</button><button class="btn-ghost" id="sh_back" style="width:100%;margin-top:8px">Back to tests</button>';
+    if(experimentPlan)$("sh_experiment").onclick=function(){buildTherapy(experimentPlan.pitchHz,function(){buildSessionHub(false);},experimentPlan);};
     $("sh_checkin").onclick=buildCheckin; $("sh_safety").onclick=buildSafetyForm; $("sh_export").onclick=exportSession; $("sh_csv").onclick=exportHistoryCSV; $("sh_import").onclick=function(){$("sh_import_file").click();}; $("sh_import_file").onchange=function(){importHistoryFile(this.files[0]);}; $("sh_clear").onclick=clearSavedHistory; $("sh_back").onclick=function(){ showTab("quick"); goto("q_setup"); };
     $("session_hub").querySelectorAll("[data-delete-kind]").forEach(function(b){b.onclick=function(){if(!confirm("Delete this saved record? This cannot be undone."))return;var arr=b.dataset.deleteKind==="checkin"?MS.checkins:MS.soundSessions;arr.splice(+b.dataset.deleteIndex,1);spinePersist();spineEvent("history","delete_one","observed",{kind:b.dataset.deleteKind});buildSessionHub(false,"Record deleted.");};}); goto("session_hub");
   }
@@ -1442,45 +1464,134 @@
     setF(startHz); setMute(false); draw();
   }
 
-  /* Bounded sound-lab sessions. Digital settings are recorded; acoustic SPL is unknown. */
-  function buildTherapy(pitch, backFn){
-    var p = pitch || 6000;
-    var SOUNDS=[
-      {k:"nb",  label:"Narrowband @ "+fmt(p), desc:"soft pink noise focused on your tinnitus pitch — a classic masker", make:function(){ return voice({noise:true, color:"pink", band:Math.max(300,Math.min(p,11000)), Q:2.2}); }},
-      {k:"notch", label:"Notched noise", desc:"gentle pink noise with your pitch removed — 'notched sound therapy'", make:function(){ return voice({noise:true, color:"pink", notch:Math.max(300,Math.min(p,11000)), Q:1.4}); }},
-      {k:"pink", label:"Pink (soft) noise", desc:"gentle, natural-sounding background enrichment", make:function(){ return voice({noise:true, color:"pink", low:8000}); }},
-      {k:"white", label:"White noise", desc:"full, even background sound (brighter)", make:function(){ return voice({noise:true, low:9000}); }}
-    ];
-    var v=null, sel="nb", vol=0.12, tick=null, began=0, planned=300, before=null, soundDigital=null;
-    function elapsed(){ return began?Math.max(0,Math.round((Date.now()-began)/1000)):0; }
-    function clock(s){ var m=Math.floor(s/60), r=s%60; return m+":"+(r<10?"0":"")+r; }
+  /* Bounded sound-lab sessions. Digital settings are recorded; acoustic SPL is unknown.
+     The optional personal experiment uses three balanced A/B pairs. It is a prospective
+     self-observation design, not a blinded trial and not evidence of treatment efficacy. */
+  function randomBit(){
+    if(window.crypto&&window.crypto.getRandomValues){ var a=new Uint32Array(1); window.crypto.getRandomValues(a); return a[0]&1; }
+    return Math.random()<0.5?0:1;
+  }
+  function balancedSequence(rng){ var seq=[],pair,flip; for(pair=0;pair<3;pair++){ flip=rng(); seq.push(flip?"B":"A",flip?"A":"B"); } return seq; }
+  function latestSoundExperiment(){ return MS.soundExperiments.length?MS.soundExperiments[MS.soundExperiments.length-1]:null; }
+  function activeSoundExperiment(){ for(var i=MS.soundExperiments.length-1;i>=0;i--) if(MS.soundExperiments[i].status==="active") return MS.soundExperiments[i]; return null; }
+  function buildTherapy(pitch, backFn, resumeExperiment){
+    var p=pitch||6000;
+    function soundDefs(hz){ return [
+      {k:"nb",label:"Narrowband @ "+fmt(hz),desc:"soft pink noise focused on the matched pitch",make:function(){return voice({noise:true,color:"pink",band:Math.max(300,Math.min(hz,11000)),Q:2.2});}},
+      {k:"notch",label:"Notched noise",desc:"pink noise with energy removed around the matched pitch",make:function(){return voice({noise:true,color:"pink",notch:Math.max(300,Math.min(hz,11000)),Q:1.4});}},
+      {k:"pink",label:"Pink (soft) noise",desc:"gentle broadband enrichment with less high-frequency energy",make:function(){return voice({noise:true,color:"pink",low:8000});}},
+      {k:"white",label:"White noise",desc:"brighter broadband noise, low-passed at 9 kHz",make:function(){return voice({noise:true,low:9000});}},
+      {k:"quiet",label:"Quiet rest",desc:"the same timed observation with no generated sound",make:function(){return null;}}
+    ]; }
+    function soundFor(key,hz){ return soundDefs(hz).filter(function(s){return s.k===key;})[0]; }
+    function soundOptions(selected,hz){ return soundDefs(hz).map(function(s){return '<option value="'+s.k+'"'+(s.k===selected?' selected':'')+'>'+s.label+'</option>';}).join(""); }
+    function planRecords(plan){ return MS.soundSessions.filter(function(x){return x.experiment&&x.experiment.planId===plan.id;}); }
+    function planTape(plan){
+      var next=plan.nextIndex||0;
+      return '<div class="session-tape" aria-label="Six-session comparison schedule">'+plan.sequence.map(function(letter,i){
+        var done=i<next,now=i===next&&plan.status==="active",cls=done?" done":(now?" next":"");
+        return '<div class="session-slot'+cls+'"><span>'+(done?"Done":(now?"Next":"Later"))+'</span><strong>'+(done||now?letter:"?")+'</strong></div>';
+      }).join("")+'</div><p class="small" style="margin-top:0">Completed and next conditions are shown; later allocations stay concealed to reduce anticipation. The sounds themselves are recognisable, so this is <strong>not blinded</strong>.</p>';
+    }
+    function planResult(plan){
+      var rows=planRecords(plan), metric=plan.primaryOutcome, groups={A:[],B:[]}, deviations=0,missing=0;
+      rows.forEach(function(r){ if(!r.after||r.after[metric]==null||!r.before||r.before[metric]==null){missing++;return;} var letter=r.experiment.condition; groups[letter].push(r.after[metric]-r.before[metric]); if(!r.experiment.completedAsPlanned) deviations++; });
+      if(plan.status!=="complete") return '<div class="data-note"><strong>Comparison stays hidden until all six periods finish.</strong> This reduces the temptation to stop when an early result looks favourable. Missing responses and early stops remain visible in the final summary.</div>';
+      function mean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+      function signed(v){return (v>0?"+":"")+v.toFixed(1);}
+      var am=mean(groups.A),bm=mean(groups.B),aLabel=soundFor(plan.conditionA,plan.pitchHz).label,bLabel=soundFor(plan.conditionB,plan.pitchHz).label;
+      if(am==null||bm==null) return '<div class="data-note"><strong>Not enough paired observations for a comparison.</strong> '+missing+' session'+(missing===1?"":"s")+' had no usable '+metric+' response.</div>';
+      var gap=am-bm,interpret=Math.abs(gap)<0.25?"The average changes were very similar.":((gap<0?aLabel:bLabel)+" had the lower average change by "+Math.abs(gap).toFixed(1)+" points.");
+      return '<div class="comparison"><div><span>A · '+esc(aLabel)+'</span><strong>'+signed(am)+'</strong><span>mean after − before</span></div><div><span>B · '+esc(bLabel)+'</span><strong>'+signed(bm)+'</strong><span>mean after − before</span></div></div><p class="small"><strong>Descriptive result:</strong> '+interpret+' Lower means the chosen outcome reduced more. A: n='+groups.A.length+'; B: n='+groups.B.length+'. '+deviations+' early stop'+(deviations===1?"":"s")+' and '+missing+' missing outcome'+(missing===1?"":"s")+'. This small, unblinded self-comparison cannot establish efficacy or cause.</p>';
+    }
+    function showExperimentSetup(){
+      stopAll();
+      $("therapy").innerHTML='<p class="title-sm">Plan a personal A/B comparison</p>'+
+        '<p class="small" style="margin-top:0">Choose the comparison and primary outcome <strong>before</strong> the sequence is generated. The app makes three balanced pairs (AB or BA within each pair), fixes the duration and digital setting, and hides the running comparison until all six sessions finish.</p>'+
+        '<div class="flag" style="border-color:var(--line);background:var(--panel-2);color:var(--muted)"><strong>Research diary, not treatment.</strong><br>Use the same device, headphones and system volume. Do not use this to test tolerance. Carryover, daily variation and expectation can still explain a difference.</div>'+
+        '<div class="field-grid" style="margin-top:14px"><div><label for="ex_a">Condition A</label><select id="ex_a">'+soundOptions("notch",p)+'</select></div><div><label for="ex_b">Condition B</label><select id="ex_b">'+soundOptions("pink",p)+'</select></div><div><label for="ex_outcome">Primary outcome</label><select id="ex_outcome"><option value="prominence">prominence</option><option value="loudness">perceived loudness</option><option value="distress">distress</option></select></div><div><label for="ex_duration">Fixed duration</label><select id="ex_duration"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="600">10 minutes</option><option value="1200">20 minutes</option></select></div><div><label for="ex_gap">Minimum gap</label><select id="ex_gap"><option value="120">2 hours</option><option value="480">8 hours</option><option value="1440" selected>24 hours</option></select></div><div><label for="ex_level">Fixed digital setting <strong id="ex_levelv">20</strong>%</label><input type="range" id="ex_level" min="1" max="60" value="20"></div></div>'+
+        '<div class="data-note">The gap is a practical guard against immediate carryover, not a validated tinnitus washout period. Before each later session you must also confirm that any previous change has settled.</div>'+
+        '<button class="btn-primary" id="ex_create">Generate six-session plan</button><button class="btn-ghost" id="ex_cancel" style="width:100%;margin-top:8px">Back to Sound Lab</button>';
+      $("ex_level").oninput=function(){$("ex_levelv").textContent=this.value;};
+      $("ex_create").onclick=function(){
+        if($("ex_a").value===$("ex_b").value){ alert("Choose two different conditions."); return; }
+        var plan={id:spineId(),createdAt:new Date().toISOString(),status:"active",pitchHz:p,conditionA:$("ex_a").value,conditionB:$("ex_b").value,primaryOutcome:$("ex_outcome").value,plannedSeconds:+$("ex_duration").value,washoutMinutes:+$("ex_gap").value,digitalGain:Math.max(0.0008,(+$("ex_level").value/100)*0.6),sequence:balancedSequence(randomBit),sequenceGeneration:"three computer-randomised balanced pairs; each pair contains A and B once",nextIndex:0,sessionIds:[],lastSessionAt:null};
+        MS.soundExperiments.push(plan); spinePersist(); spineEvent("sound_lab_experiment","plan","created",{id:plan.id,primaryOutcome:plan.primaryOutcome,plannedSeconds:plan.plannedSeconds,washoutMinutes:plan.washoutMinutes,sequenceGeneration:plan.sequenceGeneration}); renderExperiment(plan);
+      };
+      $("ex_cancel").onclick=function(){render();};
+      goto("therapy");
+    }
+    function renderExperiment(plan){
+      stopAll();
+      var next=plan.nextIndex||0,letter=plan.sequence[next],key=letter==="A"?plan.conditionA:plan.conditionB,sound=letter?soundFor(key,plan.pitchHz):null;
+      var waitUntil=plan.lastSessionAt?new Date(new Date(plan.lastSessionAt).getTime()+plan.washoutMinutes*60000):null;
+      var waiting=waitUntil&&Date.now()<waitUntil.getTime(),status=plan.status.replaceAll("_"," ");
+      $("therapy").innerHTML='<p class="title-sm">Personal A/B comparison</p><p class="small" style="margin-top:0">Primary outcome: <strong>'+esc(plan.primaryOutcome)+'</strong> · '+Math.round(plan.plannedSeconds/60)+' minute'+(plan.plannedSeconds===60?"":"s")+' per session · minimum gap '+(plan.washoutMinutes/60)+' hours.</p>'+
+        '<div class="experiment-card"><h3>Six-session tape · '+status+'</h3>'+planTape(plan)+planResult(plan)+'</div>'+
+        (plan.status==="active"?'<div class="data-note"><strong>Next: condition '+letter+' · '+esc(sound.label)+'</strong><br>Keep the same device, headphones, system volume and surroundings where practical.'+(waiting?'<br><strong>Earliest next start:</strong> '+esc(waitUntil.toLocaleString()):'')+'</div>'+
+        (plan.lastSessionAt?'<label class="checkline"><input type="checkbox" id="ex_settled"> Any change after the previous session has settled, and today still feels comfortable for this session.</label>':'')+
+        '<button class="btn-primary" id="ex_start"'+(waiting||plan.lastSessionAt?' disabled':'')+'>Start session '+(next+1)+' of 6</button><button class="btn-danger" id="ex_end" style="width:100%;margin-top:8px">End experiment without deleting records</button>':'')+
+        '<button class="btn-ghost" id="ex_back" style="width:100%;margin-top:8px">Back to Sound Lab</button>';
+      if(plan.status==="active"){
+        var start=$("ex_start"),settled=$("ex_settled");
+        if(settled) settled.onchange=function(){start.disabled=waiting||!this.checked;};
+        start.onclick=function(){ if(waiting) return; runSession({plan:plan,index:next,condition:letter,sound:key}); };
+        $("ex_end").onclick=function(){if(!confirm("End this comparison? Saved sessions remain in local history and export."))return;plan.status="stopped_by_user";plan.endedAt=new Date().toISOString();spinePersist();spineEvent("sound_lab_experiment","plan","stopped",{id:plan.id,nextIndex:plan.nextIndex});renderExperiment(plan);};
+      }
+      $("ex_back").onclick=render; goto("therapy");
+    }
+    var v=null,running=false,sel="nb",vol=0.12,tick=null,began=0,planned=300,before=null,soundDigital=null,experimentContext=null;
+    function elapsed(){return began?Math.max(0,Math.round((Date.now()-began)/1000)):0;}
+    function clock(s){var m=Math.floor(s/60),r=s%60;return m+":"+(r<10?"0":"")+r;}
+    function saveRecord(after,reason,used){
+      var rec={id:spineId(),at:new Date().toISOString(),pitchHz:experimentContext?experimentContext.plan.pitchHz:p,sound:sel,purpose:before.purpose,plannedSeconds:planned,elapsedSeconds:used,digitalGain:vol,before:before,after:after,digitalOutput:soundDigital,stopReason:reason,calibration:"digital relative level and dBFS only; acoustic SPL unknown"};
+      if(after&&after.comfort==="painful"&&MS.safety){MS.safety.soundPain="yes";MS.safety.mode="self_report_only";MS.safety.recordedAt=rec.at;MS.lastSafety=MS.safety;spineEvent("safety","sound_lab_pain","observed",{sessionId:rec.id});}
+      if(experimentContext){
+        rec.experiment={planId:experimentContext.plan.id,sessionIndex:experimentContext.index,condition:experimentContext.condition,primaryOutcome:experimentContext.plan.primaryOutcome,completedAsPlanned:reason==="timer_complete"};
+        var plan=experimentContext.plan; plan.sessionIds.push(rec.id); plan.nextIndex=Math.min(plan.sequence.length,(plan.nextIndex||0)+1); plan.lastSessionAt=rec.at;
+        if(after&&after.comfort==="painful"){plan.status="stopped_safety";plan.endedAt=rec.at;}
+        else if(plan.nextIndex>=plan.sequence.length){plan.status="complete";plan.completedAt=rec.at;}
+      }
+      MS.soundSessions.push(rec); spinePersist(); spineEvent("sound_lab","response","observed",rec);
+      if(experimentContext) renderExperiment(experimentContext.plan); else backFn();
+    }
     function finish(reason){
-      var used=elapsed(); soundLabCleanup=null; if(tick) clearInterval(tick); tick=null; soundDigital=endDigitalSegment();
-      if(v){ v.setGain(0.0001,0.8); var old=v; setTimeout(function(){ try{old.stop();}catch(e){} },3000); v=null; }
-      spineEvent("sound_lab","session","applied",{sound:sel,plannedSeconds:planned,elapsedSeconds:used,stopReason:reason});
-      $("therapy").innerHTML='<p class="title-sm">After the sound</p><p class="small" style="margin-top:0">Capture the immediate observation. This does not establish treatment benefit or cause.</p><label for="th_effect">Tinnitus now</label><select id="th_effect"><option value="quieter">quieter</option><option value="same">unchanged</option><option value="louder">louder</option><option value="uncertain">uncertain</option></select><div class="field-grid" style="margin-top:12px"><div>'+scaleField("th_after_loud","Perceived loudness",before?before.loudness:5)+'</div><div>'+scaleField("th_after_dist","Distress",before?before.distress:3)+'</div></div><label for="th_comfort" style="margin-top:12px">Sound comfort</label><select id="th_comfort"><option>comfortable</option><option>neutral</option><option>uncomfortable</option><option>painful</option></select><button class="btn-primary" id="th_save" style="margin-top:14px">Save observation</button><button class="btn-ghost" id="th_skip" style="width:100%;margin-top:8px">Skip &amp; return</button>';
-      ["th_after_loud","th_after_dist"].forEach(wireScale);
-      $("th_save").onclick=function(){ var rec={id:spineId(),at:new Date().toISOString(),pitchHz:p,sound:sel,purpose:before.purpose,plannedSeconds:planned,elapsedSeconds:used,digitalGain:vol,before:before,after:{effect:$("th_effect").value,loudness:+$("th_after_loud").value,distress:+$("th_after_dist").value,comfort:$("th_comfort").value},digitalOutput:soundDigital,stopReason:reason,calibration:"digital relative level and dBFS only; acoustic SPL unknown"}; MS.soundSessions.push(rec); spinePersist(); spineEvent("sound_lab","response","observed",rec); backFn(); };
-      $("th_skip").onclick=backFn;
+      if(!running) return; running=false; var used=elapsed(); soundLabCleanup=null; if(tick) clearInterval(tick); tick=null; soundDigital=endDigitalSegment();
+      if(v){v.setGain(0.0001,0.8);var old=v;setTimeout(function(){try{old.stop();}catch(e){}},3000);v=null;}
+      spineEvent("sound_lab","session","applied",{sound:sel,plannedSeconds:planned,elapsedSeconds:used,stopReason:reason,experimentId:experimentContext?experimentContext.plan.id:null});
+      $("therapy").innerHTML='<p class="title-sm">After the '+(sel==="quiet"?"rest":"sound")+'</p><p class="small" style="margin-top:0">Capture the immediate observation. This does not establish treatment benefit or cause.</p><label for="th_effect">Tinnitus now</label><select id="th_effect"><option value="quieter">quieter</option><option value="same">unchanged</option><option value="louder">louder</option><option value="uncertain">uncertain</option></select><div class="field-grid" style="margin-top:12px"><div>'+scaleField("th_after_prom","Prominence",before?before.prominence:5)+'</div><div>'+scaleField("th_after_loud","Perceived loudness",before?before.loudness:5)+'</div><div>'+scaleField("th_after_dist","Distress",before?before.distress:3)+'</div></div><label for="th_comfort" style="margin-top:12px">Sound comfort</label><select id="th_comfort"><option>comfortable</option><option>neutral</option><option>uncomfortable</option><option>painful</option></select><button class="btn-primary" id="th_save" style="margin-top:14px">Save observation</button><button class="btn-ghost" id="th_skip" style="width:100%;margin-top:8px">'+(experimentContext?"Record missing response":"Skip &amp; return")+'</button>';
+      ["th_after_prom","th_after_loud","th_after_dist"].forEach(wireScale);
+      $("th_save").onclick=function(){saveRecord({effect:$("th_effect").value,prominence:+$("th_after_prom").value,loudness:+$("th_after_loud").value,distress:+$("th_after_dist").value,comfort:$("th_comfort").value},reason,used);};
+      $("th_skip").onclick=function(){if(experimentContext)saveRecord(null,reason,used);else backFn();};
+    }
+    function runSession(ctx){
+      stopAll(); experimentContext=ctx||null;
+      if(ctx){p=ctx.plan.pitchHz;sel=ctx.sound;planned=ctx.plan.plannedSeconds;vol=ctx.plan.digitalGain;}
+      var SOUNDS=soundDefs(p),chosen=soundFor(sel,p),fixed=!!ctx;
+      $("therapy").innerHTML='<p class="title-sm">'+(fixed?'A/B session '+(ctx.index+1)+' of 6 · condition '+ctx.condition:'Sound lab &amp; comfort session')+'</p>'+
+        '<p class="small" style="margin-top:0">'+(fixed?'The allocation is now revealed: <strong>'+esc(chosen.label)+'</strong>. Record the before scores before playback.':'A bounded, low-level listening session with before/after observation. Keep it comfortable and below full masking.')+' The app records the <strong>digital setting, not acoustic dB SPL</strong>. Stop immediately for discomfort.</p>'+
+        (fixed?'<div class="experiment-card"><h3>'+esc(chosen.label)+'</h3><p class="small">'+esc(chosen.desc)+'</p><p class="small">Fixed '+Math.round(vol/0.6*100)+'% digital setting · '+Math.round(planned/60)+' minute'+(planned===60?"":"s")+' · primary outcome '+esc(ctx.plan.primaryOutcome)+'.</p></div>':SOUNDS.map(function(s){return '<button class="choice'+(s.k===sel?' sel':'')+'" data-s="'+s.k+'"><span>'+s.label+'</span><small>'+s.desc+'</small></button>';}).join(""))+
+        (fixed?'':'<div class="field-grid" style="margin-top:14px"><div><label for="th_purpose">Purpose</label><select id="th_purpose"><option value="comfort">comfort / enrichment</option><option value="partial_masking">partial masking</option><option value="residual_inhibition">observe residual inhibition</option><option value="focus">focus</option><option value="sleep">wind-down / sleep</option></select></div><div><label for="th_duration">Bounded duration</label><select id="th_duration"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="600">10 minutes</option><option value="1200">20 minutes</option><option value="1800">30 minutes</option></select></div></div>')+
+        '<div class="field-grid" style="margin-top:12px"><div>'+scaleField("th_before_prom","Prominence",5)+'</div><div>'+scaleField("th_before_loud","Perceived loudness",5)+'</div><div>'+scaleField("th_before_dist","Distress",3)+'</div></div>'+
+        (fixed?'':'<label style="margin-top:14px">Digital level</label><input type="range" id="th_vol" min="0" max="100" value="'+Math.round(vol/0.6*100)+'">')+'<div class="timer" id="th_timer">0:00</div><p class="small" id="th_phase" style="text-align:center;margin-top:0">Ready · gentle 3-second fade-in</p><button class="btn-primary" id="th_play" style="margin-top:6px">Start bounded '+(sel==="quiet"?"rest":"session")+'</button><button class="btn-ghost" id="th_back" style="width:100%;margin-top:10px">← '+(fixed?"Back to experiment":"Back to results")+'</button>';
+      function curGain(){return fixed?ctx.plan.digitalGain:Math.max(0.0008,(+$("th_vol").value/100)*0.6);}
+      function play(){if(!requireSoundSafety())return;before={prominence:+$("th_before_prom").value,loudness:+$("th_before_loud").value,distress:+$("th_before_dist").value,purpose:fixed?"personal_ab":$("th_purpose").value};if(!fixed)planned=+$("th_duration").value;vol=curGain();stopAll();beginDigitalSegment("sound_lab");chosen=soundFor(sel,p);var made=chosen.make();v=made?track(made):null;if(v)v.setGain(curGain(),0.8);began=Date.now();running=true;soundLabCleanup=finish;$("th_play").textContent="Stop with gentle taper";$("th_phase").textContent=(sel==="quiet"?"Quiet rest":"Listening")+" · stop if uncomfortable";spineEvent("sound_lab","session","requested",{sound:sel,purpose:before.purpose,plannedSeconds:planned,digitalGain:vol,experimentId:fixed?ctx.plan.id:null});tick=setInterval(function(){var s=elapsed();if($("th_timer"))$("th_timer").textContent=clock(s);if(s>=planned)finish("timer_complete");},1000);}
+      if(!fixed)$("therapy").querySelectorAll(".choice").forEach(function(b){b.addEventListener("click",function(){if(running)return;sel=b.getAttribute("data-s");$("therapy").querySelectorAll(".choice").forEach(function(x){x.classList.remove("sel");});b.classList.add("sel");$("th_play").textContent="Start bounded "+(sel==="quiet"?"rest":"session");});});
+      ["th_before_prom","th_before_loud","th_before_dist"].forEach(wireScale);
+      if(!fixed)$("th_vol").addEventListener("input",function(){vol=curGain();if(v)v.setGain(curGain(),0.02);});
+      $("th_play").addEventListener("click",function(){if(running)finish("user_stop");else play();});
+      $("th_back").addEventListener("click",function(){if(running)finish("back");else{stopAll();if(fixed)renderExperiment(ctx.plan);else backFn();}});
+      goto("therapy");
     }
     function render(){
-      stopAll();
-      $("therapy").innerHTML='<p class="title-sm">Sound lab &amp; comfort session</p>'+
-        '<p class="small" style="margin-top:0">A bounded, low-level listening session with before/after observation. Keep it comfortable and below full masking. The app records the <strong>digital setting, not acoustic dB SPL</strong>. Stop immediately for discomfort.</p>'+
-        SOUNDS.map(function(s){ return '<button class="choice'+(s.k===sel?' sel':'')+'" data-s="'+s.k+'"><span>'+s.label+'</span><small>'+s.desc+'</small></button>'; }).join("")+
-        '<div class="field-grid" style="margin-top:14px"><div><label for="th_purpose">Purpose</label><select id="th_purpose"><option value="comfort">comfort / enrichment</option><option value="partial_masking">partial masking</option><option value="residual_inhibition">observe residual inhibition</option><option value="focus">focus</option><option value="sleep">wind-down / sleep</option></select></div><div><label for="th_duration">Bounded duration</label><select id="th_duration"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="600">10 minutes</option><option value="1200">20 minutes</option><option value="1800">30 minutes</option></select></div></div><div class="field-grid" style="margin-top:12px"><div>'+scaleField("th_before_prom","Prominence",5)+'</div><div>'+scaleField("th_before_loud","Perceived loudness",5)+'</div><div>'+scaleField("th_before_dist","Distress",3)+'</div></div>'+
-        '<label style="margin-top:14px">Digital level</label><input type="range" id="th_vol" min="0" max="100" value="'+Math.round(vol/0.6*100)+'"><div class="timer" id="th_timer">0:00</div><p class="small" id="th_phase" style="text-align:center;margin-top:0">Ready · gentle 3-second fade-in</p>'+
-        '<button class="btn-primary" id="th_play" style="margin-top:6px">Start bounded session</button>'+
-        '<button class="btn-ghost" id="th_back" style="width:100%; margin-top:10px">← Back to results</button>';
-      function curGain(){ return Math.max(0.0008, (+$("th_vol").value/100)*0.6); }
-      function play(){ if(!requireSoundSafety()) return; before={prominence:+$("th_before_prom").value,loudness:+$("th_before_loud").value,distress:+$("th_before_dist").value,purpose:$("th_purpose").value}; planned=+$("th_duration").value; vol=curGain(); stopAll(); beginDigitalSegment("sound_lab"); v=track(SOUNDS.filter(function(s){return s.k===sel;})[0].make()); v.setGain(curGain(),0.8); began=Date.now(); soundLabCleanup=finish; $("th_play").textContent="Stop with gentle taper"; $("th_phase").textContent="Listening · stop if uncomfortable"; spineEvent("sound_lab","session","requested",{sound:sel,purpose:before.purpose,plannedSeconds:planned,digitalGain:vol}); tick=setInterval(function(){ var s=elapsed(); if($("th_timer")) $("th_timer").textContent=clock(s); if(s>=planned) finish("timer_complete"); },1000); }
-      $("therapy").querySelectorAll(".choice").forEach(function(b){ b.addEventListener("click", function(){ if(v) return; sel=b.getAttribute("data-s"); $("therapy").querySelectorAll(".choice").forEach(function(x){x.classList.remove("sel");}); b.classList.add("sel"); }); });
-      ["th_before_prom","th_before_loud","th_before_dist"].forEach(wireScale);
-      $("th_vol").addEventListener("input", function(){ vol=curGain(); if(v) v.setGain(curGain(),0.02); });
-      $("th_play").addEventListener("click", function(){ if(v){ finish("user_stop"); } else { play(); } });
-      $("th_back").addEventListener("click", function(){ if(v){ finish("back"); } else { stopAll(); backFn(); } });
+      stopAll(); experimentContext=null; var active=activeSoundExperiment();
+      $("therapy").innerHTML='<p class="title-sm">Sound lab &amp; comfort session</p><p class="small" style="margin-top:0">Choose a one-off bounded observation, or prospectively compare two conditions over six sessions. Keep every sound comfortable and below full masking.</p>'+
+        (active?'<div class="experiment-card"><h3>Personal A/B comparison in progress</h3><p class="small">'+(active.nextIndex||0)+' of 6 sessions complete · primary outcome '+esc(active.primaryOutcome)+'.</p><button class="btn-accent2" id="th_resume">Continue experiment</button></div>':'<button class="btn-accent2" id="th_plan" style="margin-bottom:12px">Plan a six-session A/B comparison</button>')+
+        '<button class="btn-primary" id="th_once">Start a one-off observation</button><button class="btn-ghost" id="th_exit" style="width:100%;margin-top:8px">← Back to results</button>';
+      if(active)$("th_resume").onclick=function(){renderExperiment(active);};else $("th_plan").onclick=showExperimentSetup;
+      $("th_once").onclick=function(){runSession(null);}; $("th_exit").onclick=function(){stopAll();backFn();}; goto("therapy");
     }
-    goto("therapy"); render();
+    goto("therapy"); var resume=resumeExperiment===true?activeSoundExperiment():resumeExperiment; if(resume)renderExperiment(resume);else render();
   }
 
   /* Tinnitus impact index — original wording, modelled on the domains a validated instrument
@@ -2704,10 +2815,10 @@
     return '<div class="divider"></div><p class="title-sm">Tinnitus ↔ threshold relationship</p><table class="tt" style="margin-top:2px">'+rows.map(function(r){return '<tr><td style="text-align:left;color:var(--muted)">'+r[0]+'</td><td style="text-align:right">'+r[1]+'</td></tr>';}).join("")+'</table><p class="small" style="margin-top:6px"><strong>Sensation level (SL)</strong> = how far the matched tone sat <em>above your own threshold</em> at that pitch — a more meaningful "how loud is it really" than a raw level. All values relative, not dB&nbsp;HL.</p>';
   }
   function exportSession(){
-    spineEvent("session","export","requested",{events:MS.events.length,checkins:MS.checkins.length,soundSessions:MS.soundSessions.length});
+    spineEvent("session","export","requested",{events:MS.events.length,checkins:MS.checkins.length,soundSessions:MS.soundSessions.length,soundExperiments:MS.soundExperiments.length});
     var data={ schemaVersion:MS.schemaVersion, protocolVersion:MS.protocolVersion, sessionId:MS.sessionId,
       meta:{ app:"entertrainment hearing panel", startedAt:MS.startedAt, generatedAt:new Date().toISOString(), note:"Uncalibrated, self-referenced. Digital level settings are not acoustic dB SPL; hearing levels are NOT dB HL." },
-      measurementSpine:{ safety:MS.safety,capabilities:capabilitySnapshot(),events:MS.events.slice(),checkins:MS.checkins.slice(),soundSessions:MS.soundSessions.slice() },
+      measurementSpine:{ safety:MS.safety,capabilities:capabilitySnapshot(),events:MS.events.slice(),checkins:MS.checkins.slice(),soundSessions:MS.soundSessions.slice(),soundExperiments:MS.soundExperiments.slice() },
       hardware:{ sampleRate:(A.hw&&A.hw.sampleRate)||null, channelCheck:(A.hw&&A.hw.channels)||"unchecked", extendedHighFreq: FREQS.some(function(f){return f>8000;}), headphones:A.hp||null, userAgent:navigator.userAgent },
       subject:{ label:($("a_tester").value||"").trim()||null, age:A.age||null },
       audiometry:{ frequencies:FREQS.slice(), refOffset:aRefOffset(),

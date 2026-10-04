@@ -9,7 +9,8 @@ A single-file, offline-capable web app with **four visible tabs**:
 1. **Hearing range** — medium-speed 250 Hz → 20 kHz sweep; tap *"I can't hear it anymore"* to record your high-frequency cutoff.
 2. **Tinnitus pitch match** — a *slow* sweep starting at **500 Hz** (documented tinnitus low bound). After each match you land on a **fine-tune & confirm** screen: a **live oscilloscope** + **real-time spectrum with a pitch marker**, a continuous pitch scrubber (with **÷2 / ×2** octave jumps to defeat octave confusion), and an **A/B compare** that alternates the tone with silence so you can check it against your tinnitus. Runs **up to 3 times**, **geometrically averaged**.
 3. **Tinnitus character** — a short questionnaire (closest sound, laterality, pulsatile, somatic) → a **suggested tinnitus type**.
-4. **Sound lab & comfort sessions** — from the result, a bounded player tuned to your matched pitch: **narrowband** masker, **notched noise** (energy removed at your pitch), **pink-ish**, or **white** noise. Sessions use a gentle fade, a fixed 1–30 minute duration, and before/after observations. The saved level is a digital setting, never claimed as acoustic dB SPL or treatment.
+4. **Sound lab & comfort sessions** — from the result, a bounded player tuned to your matched pitch: **narrowband** masker, **notched noise** (energy removed at your pitch), **pink-ish**, **white** noise, or a timed **quiet-rest** comparator. Sessions use a gentle fade, a fixed 1–30 minute duration, and before/after prominence, loudness and distress observations. The saved level is a digital setting, never claimed as acoustic dB SPL or treatment.
+5. **Prospective personal A/B comparison** — choose two Sound Lab conditions and one primary outcome before the app creates three computer-randomised balanced pairs (six sessions). Duration and digital level are fixed; later allocations and interim comparisons stay concealed; a minimum gap and settled-state confirmation address immediate carryover. The final output is a descriptive within-person difference with missing responses and early stops retained—never a p-value, efficacy verdict or blinded-trial claim.
 
 ### 2 · Audiology panel
 0. **Set a comfort ceiling** — the loudest comfortable level; the test never exceeds it.
@@ -53,12 +54,12 @@ Results—including the full threshold table and tinnitus profile—are shown on
 
 ### Measurement spine & longitudinal check-ins
 
-The three-part ribbon above the test tabs exposes a shared record used by every module:
+The four-part ribbon above the test tabs exposes a shared record used by every module:
 
 - **Protocol-wide safety state** — sudden hearing change or severe neurological/vestibular symptoms switch the app to “seek care first”; ear pain or uncertain/painful sound tolerance switches it to self-report-only mode. The check must be reconfirmed after every page load; a previous “allowed” answer never silently authorises a later session.
 - **Capability and quality context** — AudioContext state, browser sample rate, latency where exposed, stereo-routing result, headphones and browser are exported alongside the measurements. A monitored master bus also records mixed digital RMS, peak and clipping in dBFS. These are device/signal facts, not an acoustic calibration; operating-system speech sits outside that monitor.
 - **Momentary check-ins** — tinnitus prominence, perceived loudness, distress, stress, sound tolerance, context and the immediate relationship to external sound are stored locally. Separate trends preserve each dimension. JSON/CSV export, merge-import, per-record deletion and full local-history deletion are available from Session Trace.
-- **Auditable event stream** — requested, applied and observed events use a session ID, increasing sequence, wall-clock time and monotonic elapsed time. The JSON export includes the event stream, check-ins, safety record, digital-signal summary and Sound Lab observations under schema version 3.
+- **Auditable event stream** — requested, applied and observed events use a session ID, increasing sequence, wall-clock time and monotonic elapsed time. The JSON export includes the event stream, check-ins, safety record, digital-signal summary, Sound Lab observations and prospective A/B plans under schema version 4.
 - **Emergency stop** — the persistent ribbon can stop every active Web Audio voice and operating-system speech immediately from any test screen.
 
 Local history stays in that browser until the user exports it. No microphone is used and the page does not claim room acoustics, autonomic sensing or acoustic SPL.
