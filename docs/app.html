@@ -1208,7 +1208,7 @@
     return {allowed:"No safety flags reported; comfortable-level sound tasks remain optional.",reduced:"A clinical flag was reported. Use caution and arrange appropriate assessment.",self_report_only:"Sound-provoking tasks are locked. Self-report check-ins remain available.",urgent:"Sound-provoking tasks are locked. Seek prompt professional assessment before testing."}[MS.safety.mode];
   }
   function esc(v){ return String(v==null?"":v).replace(/[&<>\"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
-  function buildSafetyForm(){
+  function buildSafetyForm(returnFn){
     var prior=MS.safety||MS.lastSafety;
     $("session_hub").innerHTML='<p class="title-sm">Session safety check</p><p class="small" style="margin-top:0">Review this at the start of <strong>every session</strong>. A previous answer never authorises sound automatically because symptoms can change. This is not a diagnosis; choose the cautious answer when unsure.</p>'+
       '<label class="checkline"><input type="checkbox" id="sf_sudden"> Sudden or rapidly worsening hearing change, especially in one ear</label>'+
@@ -1220,9 +1220,9 @@
     if(prior){ ["sudden","pulse","vertigo","ear"].forEach(function(k){ $("sf_"+k).checked=!!prior[k]; }); $("sf_sound").value=prior.soundPain||"no"; }
     $("sf_save").onclick=function(){
       var s={sudden:$("sf_sudden").checked,pulse:$("sf_pulse").checked,vertigo:$("sf_vertigo").checked,ear:$("sf_ear").checked,soundPain:$("sf_sound").value,recordedAt:new Date().toISOString()};
-      s.mode=(s.sudden||s.vertigo)?"urgent":((s.ear||s.soundPain!=="no")?"self_report_only":(s.pulse?"reduced":"allowed")); MS.safety=s; MS.lastSafety=s; spinePersist(); spineEvent("safety","screen","observed",s); buildSessionHub(false);
+      s.mode=(s.sudden||s.vertigo)?"urgent":((s.ear||s.soundPain!=="no")?"self_report_only":(s.pulse?"reduced":"allowed")); MS.safety=s; MS.lastSafety=s; spinePersist(); spineEvent("safety","screen","observed",s); if(typeof returnFn==="function") returnFn(); else buildSessionHub(false);
     };
-    $("sf_cancel").onclick=function(){ buildSessionHub(false); };
+    $("sf_cancel").onclick=function(){ if(typeof returnFn==="function") returnFn(); else buildSessionHub(false); };
     goto("session_hub");
   }
   function trendBars(){
@@ -2408,8 +2408,9 @@
     if(locked){
       notice.classList.remove("hidden");
       notice.style.borderColor="var(--danger)"; notice.style.background="color-mix(in srgb,var(--danger) 12%,transparent)";
-      notice.innerHTML=mode==="urgent"?'<strong>Seek care first — research sounds are paused.</strong> The provocation-free sound-sensitivity and recovery log remains available.':'<strong>Self-report only — research sounds are paused.</strong> The reference tone and stimulus tests are locked, but the provocation-free sound-sensitivity and recovery log remains available.';
-      calBtn.disabled=true; calBtn.textContent="Reference tone unavailable in "+(mode==="urgent"?"seek-care":"self-report-only")+" mode";
+      notice.innerHTML=(mode==="urgent"?'<strong>Seek care first — research sounds are paused.</strong> The provocation-free sound-sensitivity and recovery log remains available.':(mode==="unchecked"?'<strong>Complete the safety check before playing sound.</strong> You can still open the provocation-free sound-sensitivity and recovery log.':'<strong>Self-report only — research sounds are paused.</strong> The reference tone and stimulus tests are locked, but the provocation-free sound-sensitivity and recovery log remains available.'))+'<button class="btn-ghost" id="r_reviewSafety" style="width:100%;margin-top:10px">Review safety answers</button>';
+      $("r_reviewSafety").onclick=function(){ buildSafetyForm(researchHome); };
+      calBtn.disabled=true; calBtn.textContent=mode==="unchecked"?"Reference tone unavailable until safety check":"Reference tone unavailable in "+(mode==="urgent"?"seek-care":"self-report-only")+" mode";
       level.disabled=true; launch.textContent="Open provocation-free research suite";
     } else {
       notice.classList.add("hidden"); notice.innerHTML="";
