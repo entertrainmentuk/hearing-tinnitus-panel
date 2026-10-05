@@ -2401,16 +2401,22 @@
   }
   function rtBtn(id,title,sub){ return '<button class="btn-accent2" id="'+id+'" style="width:100%; margin-top:8px; text-align:left; white-space:normal; line-height:1.35">'+title+'<br><small style="font-weight:400; opacity:.85">'+sub+'</small></button>'; }
   function rtLocked(title,sub){ return '<div class="flag" style="margin-top:8px; border-color:var(--line); background:var(--panel-2); color:var(--muted)"><strong>'+title+'</strong><br><span class="small">'+sub+'</span></div>'; }
-  function soundPainLocked(){ return !MS.safety || soundBlocked() || !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
+  function researchLogLocked(){ return !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
+  function soundPainLocked(){ return !MS.safety || soundBlocked() || researchLogLocked(); }
   function renderResearchHome(){
     var el=$("r_summary"); if(!el) return;
-    var notice=$("r_safetyNotice"), calBtn=$("r_calBtn"), level=$("r_vol"), launch=$("r_launch"), mode=safetyMode(), locked=soundPainLocked();
+    var notice=$("r_safetyNotice"), calBtn=$("r_calBtn"), level=$("r_vol"), launch=$("r_launch"), mode=safetyMode(), sessionLocked=!MS.safety||soundBlocked(), logLocked=researchLogLocked(), locked=sessionLocked||logLocked;
     if(locked){
       notice.classList.remove("hidden");
       notice.style.borderColor="var(--danger)"; notice.style.background="color-mix(in srgb,var(--danger) 12%,transparent)";
-      notice.innerHTML=(mode==="urgent"?'<strong>Seek care first — research sounds are paused.</strong> The provocation-free sound-sensitivity and recovery log remains available.':(mode==="unchecked"?'<strong>Complete the safety check before playing sound.</strong> You can still open the provocation-free sound-sensitivity and recovery log.':'<strong>Self-report only — research sounds are paused.</strong> The reference tone and stimulus tests are locked, but the provocation-free sound-sensitivity and recovery log remains available.'))+'<button class="btn-ghost" id="r_reviewSafety" style="width:100%;margin-top:10px">Review safety answers</button>';
-      $("r_reviewSafety").onclick=function(){ buildSafetyForm(researchHome); };
-      calBtn.disabled=true; calBtn.textContent=mode==="unchecked"?"Reference tone unavailable until safety check":"Reference tone unavailable in "+(mode==="urgent"?"seek-care":"self-report-only")+" mode";
+      if(sessionLocked){
+        notice.innerHTML=(mode==="urgent"?'<strong>Seek care first — research sounds are paused.</strong> The provocation-free sound-sensitivity and recovery log remains available.':(mode==="unchecked"?'<strong>Complete the safety check before playing sound.</strong> You can still open the provocation-free sound-sensitivity and recovery log.':'<strong>Self-report only — research sounds are paused.</strong> The reference tone and stimulus tests are locked, but the provocation-free sound-sensitivity and recovery log remains available.'))+'<button class="btn-ghost" id="r_reviewSafety" style="width:100%;margin-top:10px">Review safety answers</button>';
+        $("r_reviewSafety").onclick=function(){ buildSafetyForm(researchHome); };
+      } else {
+        notice.innerHTML='<strong>The sound-sensitivity log is keeping the pain interlock active.</strong> It records sound pain or uncertainty. Review that log before any research sound is offered.<button class="btn-ghost" id="r_reviewSensitivity" style="width:100%;margin-top:10px">Review sound-sensitivity log</button>';
+        $("r_reviewSensitivity").onclick=function(){ buildSensitivity(researchHome); };
+      }
+      calBtn.disabled=true; calBtn.textContent=!sessionLocked?"Reference tone unavailable while pain interlock is active":(mode==="unchecked"?"Reference tone unavailable until safety check":"Reference tone unavailable in "+(mode==="urgent"?"seek-care":"self-report-only")+" mode");
       level.disabled=true; launch.textContent="Open provocation-free research suite";
     } else {
       notice.classList.add("hidden"); notice.innerHTML="";

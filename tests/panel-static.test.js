@@ -104,12 +104,15 @@ test("self-report-only mode keeps the provocation-free research path accessible"
   assert.match(app, /makeCal\("r_vol","r_volReadout","r_calBtn","▶︎ Play reference tone \(1 kHz\)",\{preserveView:true,onBlocked:renderResearchHome\}\)/);
   assert.match(app, /\$\("r_launch"\)\.addEventListener\("click", function\(\)\{ rCal\.stop\(\);/);
   assert.doesNotMatch(app, /\$\("r_launch"\)\.addEventListener\("click", function\(\)\{ if\(!requireSoundSafety\(\)\) return;/);
-  assert.match(app, /function soundPainLocked\(\)\{ return !MS\.safety \|\| soundBlocked\(\)/);
+  assert.match(app, /function researchLogLocked\(\)\{ return !!\(R\.sensitivity/);
+  assert.match(app, /function soundPainLocked\(\)\{ return !MS\.safety \|\| soundBlocked\(\) \|\| researchLogLocked\(\); \}/);
   assert.match(app, /rtBtn\('rtb_sens','🛡 Sound-sensitivity &amp; recovery log','Provocation-free self-report;/);
-  assert.match(app, /calBtn\.disabled=true; calBtn\.textContent=mode==="unchecked"\?"Reference tone unavailable until safety check":"Reference tone unavailable in "/);
+  assert.match(app, /calBtn\.disabled=true; calBtn\.textContent=!sessionLocked\?"Reference tone unavailable while pain interlock is active"/);
   assert.match(app, /launch\.textContent="Open provocation-free research suite"/);
   assert.match(app, /id="r_reviewSafety"[^>]*>Review safety answers<\/button>/);
   assert.match(app, /\$\("r_reviewSafety"\)\.onclick=function\(\)\{ buildSafetyForm\(researchHome\); \};/);
+  assert.match(app, /id="r_reviewSensitivity"[^>]*>Review sound-sensitivity log<\/button>/);
+  assert.match(app, /\$\("r_reviewSensitivity"\)\.onclick=function\(\)\{ buildSensitivity\(researchHome\); \};/);
   assert.match(app, /if\(typeof returnFn==="function"\) returnFn\(\); else buildSessionHub\(false\);/);
 });
 
