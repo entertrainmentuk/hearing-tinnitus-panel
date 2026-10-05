@@ -568,6 +568,7 @@
       <p class="title-sm">Research auditory-processing tests</p>
       <p class="small" style="margin-top:0">This makes the exploratory tests visible without requiring you to complete the full audiology panel first. It includes spectral, temporal, binaural/spatial and tinnitus-specific measures. Results are <strong>relative and exploratory</strong>, not clinical scores.</p>
       <div class="flag" style="border-color:var(--line); background:var(--panel-2); color:var(--muted)"><strong>Headphones required.</strong> Work in a quiet room. Keep the level clearly audible but comfortable. If ordinary sounds cause ear pain, use the provocation-free sound-sensitivity log and do not run sound-provoking tests.</div>
+      <div class="flag hidden" id="r_safetyNotice" role="status" aria-live="polite"></div>
       <div class="divider"></div>
       <p class="title-sm">Set a research-test level</p>
       <p class="small" style="margin-top:0">Set the 1&nbsp;kHz reference to a comfortable, clearly audible level. The tests stay below this ceiling.</p>
@@ -1109,9 +1110,10 @@
   }
   function safetyMode(){ return MS.safety?MS.safety.mode:"unchecked"; }
   function soundBlocked(){ return safetyMode()==="self_report_only"||safetyMode()==="urgent"; }
-  function requireSoundSafety(){
-    if(!MS.safety){ spineEvent("safety","gate","required",{}); buildSessionHub(true); return false; }
-    if(soundBlocked()){ spineEvent("safety","gate","blocked",{mode:safetyMode()}); buildSessionHub(false); return false; }
+  function requireSoundSafety(options){
+    options=options||{};
+    if(!MS.safety){ spineEvent("safety","gate","required",{}); if(!options.preserveView) buildSessionHub(true); return false; }
+    if(soundBlocked()){ spineEvent("safety","gate","blocked",{mode:safetyMode()}); if(!options.preserveView) buildSessionHub(false); return false; }
     return true;
   }
   function capabilitySnapshot(){
@@ -1325,22 +1327,22 @@
 
   /* ---------------- calibration helper ---------------- */
   function sliderGain(pct){ return Math.max(0.0008, Math.pow(pct/100,2)*0.6); }
-  function makeCal(sliderId, readoutId, btnId, playLabel){
+  function makeCal(sliderId, readoutId, btnId, playLabel, gateOptions){
     var slider=$(sliderId), readout=$(readoutId), btn=$(btnId), v=null;
     function refresh(){ readout.textContent=slider.value+"%"; if(v) v.setGain(sliderGain(+slider.value),0.02); }
     slider.addEventListener("input", refresh);
     btn.addEventListener("click", function(){
       if(v){ v.stop(); v=null; btn.textContent=playLabel; }
-      else { if(!requireSoundSafety()) return; v=track(voice({freq:1000})); v.setGain(sliderGain(+slider.value),0.03); btn.textContent="■ Stop reference tone"; spineEvent("audio","reference","applied",{control:btnId,gain:sliderGain(+slider.value)}); }
+      else { if(!requireSoundSafety(gateOptions)) { if(gateOptions&&gateOptions.onBlocked) gateOptions.onBlocked(); return; } v=track(voice({freq:1000})); v.setGain(sliderGain(+slider.value),0.03); btn.textContent="■ Stop reference tone"; spineEvent("audio","reference","applied",{control:btnId,gain:sliderGain(+slider.value)}); }
     });
     refresh();
     return { gain:function(){ return sliderGain(+slider.value); }, stop:function(){ if(v){v.stop(); v=null; btn.textContent=playLabel;} }, pct:function(){return +slider.value;} };
   }
   var qCal=makeCal("q_vol","q_volReadout","q_calBtn","▶︎ Play reference tone (1 kHz)");
   var aCal=makeCal("a_vol","a_volReadout","a_calBtn","▶︎ Play reference tone (1 kHz)");
-  var rCal=makeCal("r_vol","r_volReadout","r_calBtn","▶︎ Play reference tone (1 kHz)");
+  var rCal=makeCal("r_vol","r_volReadout","r_calBtn","▶︎ Play reference tone (1 kHz)",{preserveView:true,onBlocked:renderResearchHome});
   function researchHome(){ $("app").classList.remove("hidden"); showTab("research"); goto("r_setup"); }
-  $("r_launch").addEventListener("click", function(){ if(!requireSoundSafety()) return; rCal.stop(); A.ceil=Math.min(0.5,rCal.gain()); spineEvent("research","suite","requested",{ceiling:A.ceil}); buildResearch(researchHome); });
+  $("r_launch").addEventListener("click", function(){ rCal.stop(); A.ceil=Math.min(0.5,rCal.gain()); spineEvent("research","suite","requested",{ceiling:A.ceil,soundLocked:soundPainLocked()}); buildResearch(researchHome); });
 
   /* Device check: verify stereo routing (L/R not reversed/leaking) + read the sample rate.
      No microphone, so true acoustic response can't be measured — this catches the common failures. */
@@ -2399,9 +2401,21 @@
   }
   function rtBtn(id,title,sub){ return '<button class="btn-accent2" id="'+id+'" style="width:100%; margin-top:8px; text-align:left; white-space:normal; line-height:1.35">'+title+'<br><small style="font-weight:400; opacity:.85">'+sub+'</small></button>'; }
   function rtLocked(title,sub){ return '<div class="flag" style="margin-top:8px; border-color:var(--line); background:var(--panel-2); color:var(--muted)"><strong>'+title+'</strong><br><span class="small">'+sub+'</span></div>'; }
-  function soundPainLocked(){ return soundBlocked() || !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
+  function soundPainLocked(){ return !MS.safety || soundBlocked() || !!(R.sensitivity && (R.sensitivity.pain==="yes" || R.sensitivity.pain==="unsure")); }
   function renderResearchHome(){
     var el=$("r_summary"); if(!el) return;
+    var notice=$("r_safetyNotice"), calBtn=$("r_calBtn"), level=$("r_vol"), launch=$("r_launch"), mode=safetyMode(), locked=soundPainLocked();
+    if(locked){
+      notice.classList.remove("hidden");
+      notice.style.borderColor="var(--danger)"; notice.style.background="color-mix(in srgb,var(--danger) 12%,transparent)";
+      notice.innerHTML=mode==="urgent"?'<strong>Seek care first — research sounds are paused.</strong> The provocation-free sound-sensitivity and recovery log remains available.':'<strong>Self-report only — research sounds are paused.</strong> The reference tone and stimulus tests are locked, but the provocation-free sound-sensitivity and recovery log remains available.';
+      calBtn.disabled=true; calBtn.textContent="Reference tone unavailable in "+(mode==="urgent"?"seek-care":"self-report-only")+" mode";
+      level.disabled=true; launch.textContent="Open provocation-free research suite";
+    } else {
+      notice.classList.add("hidden"); notice.innerHTML="";
+      calBtn.disabled=false; calBtn.textContent="▶︎ Play reference tone (1 kHz)";
+      level.disabled=false; launch.textContent="Open research test suite";
+    }
     var rows=[];
     if(R.sensitivity) rows.push("Sound-sensitivity log: "+(soundPainLocked()?"pain interlock active":"completed"));
     if(R.frequency) rows.push("Frequency discrimination: "+R.frequency.thresholdCents+" cents at "+fmt(R.frequency.baseHz));

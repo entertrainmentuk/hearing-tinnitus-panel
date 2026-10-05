@@ -91,12 +91,23 @@ test("a persistent emergency stop is present", () => {
 });
 
 test("all top-level sound-producing entry points use the shared gate", () => {
-  for (const id of ["q_accept", "a_accept", "d_start", "r_launch"]) {
+  for (const id of ["q_accept", "a_accept", "d_start"]) {
     const binding = new RegExp(`\\$\\(\\"${id}\\"\\)\\.addEventListener\\(\\"click\\", function\\(\\)\\{ if\\(!requireSoundSafety\\(\\)\\) return;`);
     assert.match(app, binding, `${id} must be safety-gated`);
   }
   assert.match(app, /function devCheck\(\)\{\s+if\(!requireSoundSafety\(\)\) return;/);
   assert.match(app, /function play\(\)\{if\(!requireSoundSafety\(\)\)return;/);
+});
+
+test("self-report-only mode keeps the provocation-free research path accessible", () => {
+  assert.ok(app.includes('id="r_safetyNotice"'));
+  assert.match(app, /makeCal\("r_vol","r_volReadout","r_calBtn","▶︎ Play reference tone \(1 kHz\)",\{preserveView:true,onBlocked:renderResearchHome\}\)/);
+  assert.match(app, /\$\("r_launch"\)\.addEventListener\("click", function\(\)\{ rCal\.stop\(\);/);
+  assert.doesNotMatch(app, /\$\("r_launch"\)\.addEventListener\("click", function\(\)\{ if\(!requireSoundSafety\(\)\) return;/);
+  assert.match(app, /function soundPainLocked\(\)\{ return !MS\.safety \|\| soundBlocked\(\)/);
+  assert.match(app, /rtBtn\('rtb_sens','🛡 Sound-sensitivity &amp; recovery log','Provocation-free self-report;/);
+  assert.match(app, /calBtn\.disabled=true; calBtn\.textContent="Reference tone unavailable/);
+  assert.match(app, /launch\.textContent="Open provocation-free research suite"/);
 });
 
 test("public documentation describes the bounded, uncalibrated Sound Lab", () => {
